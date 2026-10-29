@@ -28,7 +28,7 @@ Is a changed return reason "inconsistent order details" under rule 8? The sample
 
 ## Q7. No client rule routes to the Warranty Team
 None of the nine section 4 rules names the Warranty Team, but the sample assigns four cases to it.
-**Current behavior:** rule W1 (warranty claim goes to the Warranty Team) is derived from policy section 2 and KB 318 ("Warranty staff determine whether the concern is covered") and labeled `policy_derived`. Checkpoint 1 reports results with and without it. **Team should confirm W1 is acceptable.**
+**Resolved (team confirmed, 2026-10-28):** keep rule W1 (warranty claim goes to the Warranty Team) as a policy derived rule, sourced from policy section 2 and KB 318 ("Warranty staff determine whether the concern is covered"). It is labeled `policy_derived` and kept separate from the nine client rules in code, README and results. Checkpoint 1 reports results with and without it (39/48 client rules only, 43/48 with W1). The client has still not stated a warranty routing rule, so this remains a team interpretation of policy text.
 
 ## Q8. Stalled shipment owner (TEAM PROPOSED rule T2)
 The proposed rule says "Shipping Support or Fulfillment Support".
