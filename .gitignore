@@ -1,0 +1,31 @@
+# Secrets and API keys
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*secret*
+*credentials*.json
+api_keys*
+
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
