@@ -1,0 +1,2 @@
+# Stage 1 uses only the Python standard library (3.11+).
+# Stage 2 will add: anthropic, pydantic, and optionally the Google Gemini SDK.
