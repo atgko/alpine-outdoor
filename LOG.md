@@ -16,3 +16,31 @@ One entry per experiment or build step: what changed, why, result, and anything 
 - `pip install pytest` failed with an SSL certificate error in this environment, so the tests use the standard library `unittest`. pytest can still run them.
 - No section 4 client rule routes to the Warranty Team. W1 was added from policy text and is reported separately (QUESTIONS.md Q7).
 - The rules were written with knowledge of all 48 cases, so the holdout split does not hold out the rules.
+
+## 2026-10-28: Checkpoint 1, rules only router vs assigned_owner
+
+**What changed:** Added `eval/rules_baseline.py`. It runs the rule layer on all 48 cases under five rule sets and compares `primary_route` with `assigned_owner`. Unit tests (79) were run first and passed.
+
+**Why:** Reproduce the team's earlier rules only baseline (reported as 40 of 48) and measure the effect of each proposed addition separately.
+
+**Setup:** Data split all 48 (tune 28, holdout 20). Mode: structured fields plus keyword extraction from `policy_relevant_facts`, no customer message, no LLM. Run log `runs/rules_baseline_20261029T024611Z.jsonl`. Results in `results/rules_baseline.md` and `results/rules_baseline_cases.csv`.
+
+**Result (match with assigned_owner):**
+
+| Config | All 48 | Tune 28 | Holdout 20 |
+|---|---|---|---|
+| 9 client rules only | 39/48 | 22/28 | 17/20 |
+| Client rules + W1 (without team proposed) | 43/48 | 24/28 | 19/20 |
+| + T1 only | 42/48 | 23/28 | 19/20 |
+| + T2 only | 45/48 | 26/28 | 19/20 |
+| Client rules + W1 + T1 + T2 (with team proposed) | 44/48 | 25/28 | 19/20 |
+
+**Findings:**
+- The client rules alone give 39/48, not the 40/48 from the earlier test. The earlier test's exact rule reading is not available, so the one case difference cannot be traced.
+- W1 (warranty claims to Warranty Team) fixes 4 cases. It is policy derived, not a client rule.
+- T2 (stalled shipment) fixes CS-5220 and CS-5243 and breaks nothing.
+- T1 (fulfillment error) fixes CS-5214 and CS-5223 but breaks CS-5204, CS-5225 and CS-5237. Net effect is minus 1 case. It was not tuned to fit (team decision 2).
+- CS-5244 (washed jacket) is a known miss under team decision 4.
+- Rule 8 is "cannot evaluate" on 45 of 48 cases because `prior_related_claims_90d` is not in the CSV.
+
+**Caveats:** 48 selected cases, not representative. The rules were developed with knowledge of all 48 cases, so the holdout numbers are not an unbiased estimate. The holdout was touched at user request and the run log carries a warning line.
