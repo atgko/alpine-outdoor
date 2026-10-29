@@ -44,3 +44,18 @@ One entry per experiment or build step: what changed, why, result, and anything 
 - Rule 8 is "cannot evaluate" on 45 of 48 cases because `prior_related_claims_90d` is not in the CSV.
 
 **Caveats:** 48 selected cases, not representative. The rules were developed with knowledge of all 48 cases, so the holdout numbers are not an unbiased estimate. The holdout was touched at user request and the run log carries a warning line.
+
+## 2026-10-28: Stage 2 build (prompts v1 to v4, pipeline, guardrails, simulated messages)
+
+**What changed:** Added `src/config.py` (model names in one place), `src/schema.py` (pydantic schema), `src/llm.py` (Anthropic wrapper with counted retries and backoff, SDK retries off), `src/pipeline.py` (one case end to end), `src/guardrails.py` (phrase checks), prompts v1 to v4, `eval/guards.py` (holdout lock and spend guard), `eval/run_cases.py` (side by side runner with `--dry-run`), and `data/simulated_messages.csv` (48 hand written messages, 16 messy, all marked simulated). Resolved Q7 (W1 confirmed as policy derived).
+
+**Why:** Stage 2 of the build plan. Each prompt version adds one thing so its effect can be measured.
+
+**Design choices:** JSON is requested in the prompt and validated with pydantic rather than enforced with the API structured output feature, so that schema failures can be measured and the same check works for other providers. The server side refusal fallback feature is not enabled because it would silently swap the model and contaminate model comparisons; refusals are logged as failures instead. v4 runs the rule layer on structured fields plus keyword extracted facts before the model call; it does not re run rules on model extracted facts.
+
+**Result:** 118 unit tests pass. No API calls made yet.
+
+**Failures and deviations:**
+- The `anthropic` SDK is not installed and pip cannot reach PyPI from the Claude Code sandbox (SSL certificate error). The user needs to install it.
+- A guardrail test failed on first run: the 25 character negation window cut off "can't" in "We can't confirm the jacket is still eligible". Fixed by checking negation within the same clause up to 40 characters, and added a test that "Don't worry, we have issued your refund" is still caught.
+- Three Stage 4 demo cases (CS-5201, CS-5208, CS-5209) are in the holdout split. To be resolved before Stage 4.

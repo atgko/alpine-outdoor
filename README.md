@@ -9,7 +9,7 @@ Design: a deterministic rule layer enforces every control, an LLM (Stage 2) extr
 | Stage | Status |
 |---|---|
 | 1. Knowledge base and rule layer | Done |
-| 2. LLM pipeline with versioned prompts | Not started |
+| 2. LLM pipeline with versioned prompts | Built, awaiting Checkpoint 2 run |
 | 3. Evaluation harness | Not started |
 | 4. Review screen and demo | Not started |
 
@@ -112,6 +112,35 @@ Every fact in `CaseFacts` is tagged:
 - `structured`: a CSV field (issue type, category, order number provided, amount, requested outcome, delivery status).
 - `extracted`: read from `policy_relevant_facts` text. In Stage 1 this is a simple keyword reader. In Stage 2 the LLM fills these fields. The 30 day window and item condition are extracted from text because the CSV has no delivery date or case received date.
 - `inferred`: `purchase_channel` is set to online when a delivery status exists, because only online orders ship. Otherwise it is unknown.
+
+## LLM pipeline (Stage 2)
+
+Models are set in `src/config.py` only: `small` is `claude-haiku-5-5` (used for development runs) and `large` is `claude-opus-5-5`. The API key comes from the `ANTHROPIC_API_KEY` environment variable and is never written to files or logs. Gemini is not configured yet; it will be added only after the current Google documentation is checked and the team confirms.
+
+| Version | What it adds | Git tag |
+|---|---|---|
+| v1 baseline | Plain instruction: recommend a team and draft a reply. No schema, no KB, no rules. Route is read from the first team name in the text. | prompt-v1 |
+| v2 structured | JSON output validated against the schema (pydantic). Invalid output is retried once, then logged as a failure. | prompt-v2 |
+| v3 grounded | Approved KB sources selected by issue type and keyword, assistant rules, `sources_cited`, "not covered in approved sources". | prompt-v3 |
+| v4 full hybrid | Rule layer results passed as mandatory facts. When a rule fires, the final route is the rule layer `primary_route`, and any model disagreement is logged. | prompt-v4 |
+
+Prompt files in `src/prompts/` are never overwritten. Each run logs the prompt file hash.
+
+The model sees only these CSV fields: case_id, channel, issue_type, product_category, order_number_provided, order_date, delivery_status, purchase_amount_usd, requested_outcome, policy_relevant_facts, evidence_provided. The label and outcome columns are never in the prompt (tested).
+
+Modes: `fields_only` (structured case fields) and `fields_plus_simulated_message`.
+
+### Simulated customer messages
+
+The CSV has no raw customer messages. `data/simulated_messages.csv` holds one message per case, written by hand from the case row (by Claude Code, reviewed by the team). Every row is `simulated: true`. 16 of 48 are messy (long, emotional, order number buried, or two issues). Order numbers such as AO-418201 are fictional placeholders. Messages were written to keep the case facts and not change the correct answer. Any result that uses messages is labeled as using SIMULATED messages.
+
+### Guardrail checks
+
+`src/guardrails.py` checks the customer draft reply with phrase patterns for: promising or implying an action, safety advice on climbing or protective gear, revealing fraud criteria, return eligibility after washing, and following an injected instruction. It also checks cited source ids and KB 710 use. Known limits: patterns miss paraphrases, negation is checked only within the same clause (40 characters back), any mention of "fraud" in a customer reply counts as a hint, and the safety check runs on every case. A human must review a sample.
+
+### Run guards
+
+`eval/guards.py`: holdout cases are refused unless both `--holdout` and `--final` are given, and touching the holdout writes a warning line to the run log. Every run prints an estimated call count (with an upper bound that assumes every schema retry is used) and requires `--yes` above 200 calls.
 
 ## Splits
 
