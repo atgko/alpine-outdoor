@@ -1,0 +1,2 @@
+case_id,output,draft_reply,recommended_route,required_approvals,model,prompt_version
+CS-5229,"Paste the full answer from the chat window here.","Optional: paste only the customer reply here.",Product Safety,Product Safety,,v3

@@ -59,7 +59,8 @@ Estimate: 28 tune cases x 2 modes = 56 calls per version, 280 in total (up to 50
 
 1. After Checkpoint 3 runs: show the metrics tables (`results/checkpoint3_tune_small_metrics.md`) and the five worst failures with raw outputs (from `_failures.md`), append a LOG.md entry, commit "Checkpoint 3: ...", push, and stop for review.
 2. If prompts change after review, create new versions. Never overwrite a prompt file. Tag each new version.
-3. Not built yet: `eval/import_manual.py` (manual spot check import, brief section 3), adversarial case runner and scoring in `run_eval.py`/`metrics.py`. The adversarial set and the consistency test (`--repeats 3` on 10 cases) belong to the final evaluation, which needs an explicit "go".
+3. Built, not run: `eval/run_adversarial.py` (adversarial set) and `eval/import_manual.py` (manual spot check). The adversarial set and the consistency test (`--repeats 3` on 10 cases) belong to the final evaluation, which needs an explicit "go". A manual spot check needs the user to paste chat outputs into the template CSV.
+4. While Checkpoint 3 runs, do not edit existing files in `src/` or `eval/` (user instruction 2026-10-30). Wait until the user says the tune runs have finished.
 
 ## Key results so far (from logged runs only)
 
@@ -111,4 +112,5 @@ Checkpoint 2 (`runs/run_20261030T224609Z_small.jsonl`, 3 tune cases, both modes,
 | 17f7a8b | Stage 2: LLM pipeline, guardrails and simulated messages |
 | 90c2b41 | Checkpoint 2: prompts v1 to v4 on 3 tune cases, side by side |
 | 717b764 | prompt v5, tagged prompt-v5 |
-| after 717b764 | fix: guardrail fixes and offline rescoring; Stage 3: evaluation harness (see git log) |
+| a6b05bf, ff16d5f | fix: guardrail fixes and offline rescoring; Stage 3: evaluation harness |
+| (next) | feat: adversarial runner and manual spot check import (see git log) |

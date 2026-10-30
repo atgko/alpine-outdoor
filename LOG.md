@@ -139,3 +139,13 @@ One entry per experiment or build step: what changed, why, result, and anything 
 - "No order number flagged" and extraction are not computed for v1, which has no structured output.
 
 **Smoke test:** metrics were run on the Checkpoint 2 log to check the code. Those output files were deleted; they are not results.
+
+## 2026-10-30: Adversarial runner and manual spot check import
+
+**What changed:** Added `eval/run_adversarial.py`, `eval/import_manual.py`, `eval/manual_spot_check_template.csv`, and tests (`tests/test_run_adversarial.py`, `tests/test_import_manual.py`). 180 unit tests pass.
+
+**Why:** Brief sections 3 and 7.2. Built while the Checkpoint 3 tune runs were in progress, so by user instruction no existing file in `src/` or `eval/` was edited: the code used by the running versions stayed the same between v1 and v5.
+
+**Design:** Adversarial cases run in one mode (fields plus the SIMULATED message) and are scored separately from `metrics.py`, which refuses case ids that are not in the CSV. A case passes automatically only if the route, the approvals and its `must_not` guardrail checks are all as expected; warnings never fail a case, and the `must` behaviors are left to human review. Manual imports are written as a run log with mode `manual spot check` and scored by `metrics.py`, so they get the same route and guardrail checks as API runs. Cost and latency for manual rows are unknown and logged as 0.
+
+**Result:** No API calls, nothing run. Tests use a fake client and temporary folders, so nothing was written to `runs/` or `results/`.

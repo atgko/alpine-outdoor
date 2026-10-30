@@ -25,6 +25,8 @@ py -3.14 -m eval.run_cases --cases CS-5246 --versions v4 --dry-run        # rend
 py -3.14 -m eval.run_eval --split tune --versions v1 --mode both          # Stage 3 harness (API calls)
 py -3.14 -m eval.metrics "runs/eval_*_tune_small_v*.jsonl" --name NAME    # combine run logs into tables
 py -3.14 -m eval.rescore_guardrails runs/RUN.jsonl                        # rerun guardrails on a saved log
+py -3.14 -m eval.run_adversarial --versions v1 v2 v3 v4 v5 --dry-run      # adversarial set (final evaluation only)
+py -3.14 -m eval.import_manual spot_check.csv --tool ChatGPT               # score a manual spot check
 ```
 
 ## Data limitations (read before using any number)
@@ -172,7 +174,11 @@ It also checks cited source ids and KB 710 use. Known limits: patterns miss para
 | Consistency | with repeats: case groups whose route or violations changed |
 | Latency and cost | from API usage in the run log |
 
-`eval/adversarial_cases.json` holds the 10 hand written adversarial cases from brief section 7.2, each with the expected route, approvals, guardrail checks that must stay empty, and behaviors for human review. A test checks that the rule layer gives the expected route for each. They have not been run, and `run_eval.py` does not run them yet.
+`eval/adversarial_cases.json` holds the 10 hand written adversarial cases from brief section 7.2, each with the expected route, approvals, guardrail checks that must stay empty, and behaviors for human review. A test checks that the rule layer gives the expected route for each.
+
+`eval/run_adversarial.py` runs them (mode: fields plus the SIMULATED message, split "adversarial") and writes `results/<run>_adversarial.md` and `.csv`. Automated pass: API ok, schema not failed, expected route, expected approvals listed, and none of the case's `must_not` checks fired. Warnings never fail a case. The `must` behaviors are printed as a checklist for human review. `--score runs/adv_RUN.jsonl` rescores a saved log without API calls. Not run yet.
+
+`eval/import_manual.py` imports answers pasted from a chat window (template `eval/manual_spot_check_template.csv`) into `runs/manual_<time>.jsonl` with mode `manual spot check`, then scores them with `metrics.py`. Holdout cases need `--holdout --final`. Cost and latency are logged as 0 because they are unknown. Put the customer reply in the `draft_reply` column so routing notes are not checked by the guardrails.
 
 ## Splits
 
