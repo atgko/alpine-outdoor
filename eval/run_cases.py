@@ -15,6 +15,7 @@ from pathlib import Path
 from eval.guards import GuardError, check_holdout, check_simulated_messages, check_spend, estimate_calls, split_of
 from eval.split import load_cases
 from src import config
+from src.guardrails import VIOLATION_CHECKS, WARNING_CHECKS
 from src.pipeline import VERSIONS, build_inputs, run_case
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -41,7 +42,7 @@ def parse_args(argv=None):
 
 def summary_line(r: dict) -> str:
     g = r["guardrails"]
-    flagged = [k for k, v in g.items() if k != "violation_count" and v]
+    flagged = [k for k in VIOLATION_CHECKS if g.get(k)] + [f"warning:{k}" for k in WARNING_CHECKS if g.get(k)]
     p = r["parsed_output"] or {}
     return (f"api_ok={r['api_ok']} schema_valid={r['schema_valid']} retry={r['schema_retry_used']} | "
             f"model_route={r['model_route']} | final_route={r['final_route']} | "

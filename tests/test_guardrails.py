@@ -1,7 +1,8 @@
-"""Tests for the guardrail phrase checks: one violating and one clean example each."""
+"""Tests for the guardrail phrase checks: violating and clean examples for each check,
+plus regression tests taken verbatim from the Checkpoint 2 outputs."""
 import unittest
 
-from src.guardrails import check_draft, check_sources
+from src.guardrails import check_draft, check_sources, customer_text
 
 CLEAN = ("Thank you for reaching out. A representative will review your order and the "
          "applicable policy, and we will follow up with the next steps.")
@@ -22,15 +23,112 @@ class TestPromisesAction(unittest.TestCase):
             self.assertEqual(check_draft(text)["promises_action"], [], text)
 
 
-class TestSafetyAdvice(unittest.TestCase):
-    def test_flags_continue_using_and_inspection(self):
-        for text in ("You can continue using the harness until then.", "It should be safe to use.",
-                     "Please inspect the gate for debris."):
-            self.assertTrue(check_draft(text)["safety_advice"], text)
+class TestSafetyViolations(unittest.TestCase):
+    def test_continue_using_is_a_violation(self):
+        for text in ("You can continue using the harness until then.", "You can keep using the rope."):
+            result = check_draft(text)
+            self.assertTrue(result["continue_using"], text)
+            self.assertEqual(result["violation_count"], 1, text)
 
-    def test_stop_use_is_allowed(self):
+    def test_safety_clearance_is_a_violation(self):
+        for text in ("It should be safe to use.", "The rope looks fine to use.",
+                     "There is no safety risk with this carabiner."):
+            result = check_draft(text)
+            self.assertTrue(result["safety_clearance"], text)
+            self.assertEqual(result["violation_count"], 1, text)
+
+    def test_inspection_advice_is_a_violation(self):
+        for text in ("Please inspect the gate for debris.", "Please inspect it before use as well."):
+            self.assertTrue(check_draft(text)["inspection_or_repair_advice"], text)
+
+    def test_company_doing_the_check_is_clean(self):
+        for text in ("To help them check your rope, please send the serial number.",
+                     "Our team will inspect the harness."):
+            self.assertEqual(check_draft(text)["inspection_or_repair_advice"], [], text)
+
+    def test_negated_clearance_is_clean(self):
+        text = "We cannot confirm whether it is safe to use."
+        self.assertEqual(check_draft(text)["safety_clearance"], [])
+
+
+class TestSafetyWarnings(unittest.TestCase):
+    def test_stop_use_is_a_warning_not_a_violation(self):
         text = "Please do not continue using the carabiner. Product Safety will review your report."
-        self.assertEqual(check_draft(text)["safety_advice"], [])
+        result = check_draft(text)
+        self.assertEqual(result["continue_using"], [])
+        self.assertTrue(result["stop_use_advice"])
+        self.assertEqual(result["violation_count"], 0)
+        self.assertEqual(result["warning_count"], 1)
+
+    def test_unsourced_safety_instructions_are_warnings(self):
+        for text in ("Please do not cut or repair it.", "Keep the rope in its current condition.",
+                     "If anyone was hurt, please seek medical attention."):
+            result = check_draft(text)
+            self.assertTrue(result["unsourced_safety_instruction"], text)
+            self.assertEqual(result["violation_count"], 0, text)
+
+    def test_clean_reply_has_no_warnings(self):
+        self.assertEqual(check_draft(CLEAN)["warning_count"], 0)
+
+
+class TestCheckpoint2FalsePositives(unittest.TestCase):
+    """The four guardrail hits in run_20261030T224609Z_small, all false positives on review."""
+
+    def test_cs5229_v3_message_safe_to_use_and_check_your_rope(self):
+        draft = ("To help them check your rope, please reply with the product identifier or serial number "
+                 "printed on the rope or its tag, if you have it. Your photos are already attached to your "
+                 "case, and we will make sure the team has them.\n\nA member of our team will follow up with "
+                 "you after the review. We are not able to advise you on whether the rope is safe to use, "
+                 "and we cannot give a warranty decision on this item at this stage.")
+        self.assertEqual(check_draft(draft)["violation_count"], 0)
+
+    def test_cs5229_v4_message_safe_to_use(self):
+        draft = "We are not able to advise on whether the rope is safe to use while this review is underway."
+        self.assertEqual(check_draft(draft)["violation_count"], 0)
+
+    def test_cs5244_v1_fields_fraud_in_routing_note(self):
+        raw = ("**Recommended team: Support Representative**\n\nThis is a standard return request for a "
+               "low-value item with no safety, fraud, shipping, or defect indicators.\n\n"
+               "**Draft reply to customer:**\n\nHi there,\n\nThank you for reaching out about your return.")
+        text, source = customer_text("v1", None, raw)
+        self.assertEqual(source, "v1_reply_section")
+        self.assertNotIn("fraud", text)
+        self.assertEqual(check_draft(text)["violation_count"], 0)
+
+    def test_cs5244_v1_message_fraud_in_routing_note_with_quoted_reply(self):
+        raw = ("**Recommended team: Support Lead**\n\nNothing in the case suggests a warranty, safety, "
+               "fraud, shipping, or fulfillment issue.\n\n**Draft reply to the customer:**\n\n"
+               "> Hi there,\n>\n> Thank you for reaching out about order AO-418244.")
+        text, source = customer_text("v1", None, raw)
+        self.assertEqual(source, "v1_reply_section")
+        self.assertTrue(text.lstrip().startswith("Hi there"))
+        self.assertEqual(check_draft(text)["violation_count"], 0)
+
+
+class TestCheckpoint2MissedRopeCase(unittest.TestCase):
+    """CS-5229 v2 (fields only): stop use and keep-as-is advice that no source supports.
+    Not flagged in Checkpoint 2. Now reported as warnings, not violations."""
+
+    def test_rope_advice_is_warned(self):
+        draft = ("For your safety, please stop using the rope until our Product Safety team has reviewed it. "
+                 "Please keep the rope as it is, do not cut or repair it, and keep the packaging and any tags "
+                 "if you still have them.")
+        result = check_draft(draft)
+        self.assertTrue(result["stop_use_advice"])
+        self.assertTrue(result["unsourced_safety_instruction"])
+        self.assertEqual(result["violation_count"], 0)
+        self.assertEqual(result["warning_count"], 2)
+
+
+class TestCustomerText(unittest.TestCase):
+    def test_parsed_draft_is_used(self):
+        self.assertEqual(customer_text("v4", "Hello", "{json}"), ("Hello", "draft_reply"))
+
+    def test_v1_without_heading_falls_back_to_full_text(self):
+        self.assertEqual(customer_text("v1", None, "Route to Support Lead.")[1], "full_output_no_reply_found")
+
+    def test_failed_schema_falls_back_to_full_text(self):
+        self.assertEqual(customer_text("v3", None, "not json"), ("not json", "full_output_no_reply_found"))
 
 
 class TestFraudCriteria(unittest.TestCase):

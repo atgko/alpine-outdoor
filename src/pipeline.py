@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.case_facts import ISSUE_TYPE_MAP, from_csv_row
-from src.guardrails import check_draft, check_sources
+from src.guardrails import check_draft, check_sources, customer_text
 from src.kb import load_kb, select_sources
 from src.rules import FIRED, RuleResult, evaluate
 from src.schema import ROUTES, SCHEMA_TEMPLATE, parse_output
@@ -121,7 +121,7 @@ def run_case(row: dict[str, str], version: str, client, split: str,
         approvals = list(dict.fromkeys([*rule_result.required_approvals, *approvals]))
         disagreed = None if model_route is None else model_route != rule_result.primary_route
 
-    draft = parsed.draft_reply if parsed else last.text
+    draft, draft_source = customer_text(version, parsed.draft_reply if parsed else None, last.text)
     note = parsed.draft_case_note if parsed else ""
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -143,6 +143,8 @@ def run_case(row: dict[str, str], version: str, client, split: str,
         "model_disagreed_with_rules": disagreed,
         "sources_provided": list(sources),
         "sources_cited": list(parsed.sources_cited) if parsed else [],
+        "injection_present": injection_present,
+        "guardrail_text_source": draft_source,
         "guardrails": check_draft(draft, injection_present),
         "source_checks": check_sources(list(parsed.sources_cited), set(KB), f"{draft} {note}") if parsed else None,
         "input_tokens": sum(c.input_tokens for c in calls),
