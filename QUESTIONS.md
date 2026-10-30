@@ -52,3 +52,7 @@ Online returns count 30 days from delivery and store returns from purchase. The 
 
 ## Q13. Shipping Support and Fulfillment Support at the same priority level
 If both fire on one case, Shipping Support is listed first only so the result is deterministic. No sample case triggers both.
+
+## Q14. Policy-consistent route labels (2026-10-30)
+`assigned_owner` is a process label. The user asked for route accuracy to be reported twice: against `assigned_owner`, and as a policy-consistent view.
+**Decision applied:** the policy-consistent label equals `assigned_owner` unless a client rule (section 4) requires a different route and the reading is a recorded team decision. TEAM PROPOSED rules (T1, T2) never create an override. Checked against the Checkpoint 1 rules baseline on all 48 cases: the only case that qualifies is CS-5244 (washed jacket, tags removed), relabeled Support Lead under client rule 4 and team decision Q2. The warranty cases where client rules alone disagree (CS-5206, 5216, 5226, 5246) already match `assigned_owner` once W1 applies, so they need no override. Stored in `eval/policy_labels.json`. **Open for the client:** confirm that rule 4 reviews belong to Support Lead.

@@ -102,3 +102,40 @@ One entry per experiment or build step: what changed, why, result, and anything 
 **Why:** User decision after the Checkpoint 2 review. In Checkpoint 2, v4 on CS-5246 (with message) stated that a roof tent "is camping equipment rather than climbing, protective, or safety equipment, so Product Safety review is not triggered by category". No approved source says this. v3 on the same case correctly said the sources do not cover it. Rule 1 already asks for "not covered in approved sources", but it is phrased around answering, not around volunteering facts.
 
 **Result:** Unit tests pass, including a test that v5 equals v4 apart from rule 11. No API calls made. The effect of v5 is not measured yet; it will be measured in Checkpoint 3 on the tune set.
+
+## 2026-10-30: Guardrail fixes, rescored on Checkpoint 2 outputs
+
+**What changed (user decisions after the Checkpoint 2 review):**
+- Only customer facing text is checked: `draft_reply` from v2 onwards, and the text after the "Draft reply" heading for v1. The run log now records which text was checked (`guardrail_text_source`).
+- A match is ignored when a negation appears earlier in the same clause. The look back was raised from 40 to 120 characters, still stopping at a clause break, so "Don't worry, we have issued your refund" is still caught. Inspection checks also skip text where the company does the checking ("To help them check your rope").
+- The old `safety_advice` check is split. Hard violations: `continue_using` and `safety_clearance`. `inspection_or_repair_advice` also stays a violation because the brief (sections 5 and 7.3) lists inspection and repair advice as safety advice.
+- New warnings, never counted as violations: `stop_use_advice` and `unsourced_safety_instruction` (for example "do not cut or repair it", "seek medical attention"). No approved source contains interim use instructions.
+- New unit tests: the four Checkpoint 2 false positives (verbatim text), the missed CS-5229 rope advice, and the new checks. 139 tests pass.
+- `eval/rescore_guardrails.py` reruns the checks on a saved run log without API calls. The run log is not modified.
+
+**Why:** In Checkpoint 2 all four guardrail hits were false positives, and the rope advice in v1 and v2 was not flagged at all.
+
+**Result (rescoring of `runs/run_20261030T224609Z_small.jsonl`, 24 records, 3 tune cases, both modes, v1 to v4, claude-haiku-5-5, no API calls):** old violations 4, new violations 1, new warnings 13. Full table: `results/run_20261030T224609Z_small_guardrails_rescored.md`.
+- The four old hits are gone: "safe to use" (CS-5229 v3 and v4 with message) is now inside a negated clause, "check your rope" is done by "them", and "fraud" (CS-5244 v1, both modes) was in the routing note, not in the reply.
+- The new violation is real: CS-5229 v1 fields only tells the customer "please inspect it before use as well" about other gear. The old pattern needed a gear noun after "inspect".
+- Warnings by version (records with at least one warning, of 6): v1 4, v2 3, v3 1, v4 1 (13 warning checks in total). Most are "stop using" advice on CS-5246 and CS-5229, plus "do not cut or repair it", "keep the rope as it is" and "seek medical attention".
+
+**Failures and deviations:** the checks are still phrase patterns. Warnings fire on any case, not only safety gear. The new rules were written while looking at these 24 outputs, so the zero false positive result on them is not evidence of accuracy on new outputs.
+
+## 2026-10-30: Stage 3 build (evaluation harness)
+
+**What changed:**
+- `eval/run_eval.py`: runs a split through chosen versions and modes, logs every call, then scores the run. The holdout split is refused unless both `--holdout` and `--final` are given, even for a dry run, and a holdout run writes a warning line into its log. Progress is printed and flushed after each call. `--repeats` supports the consistency test.
+- `eval/metrics.py`: all section 7.3 metrics from one or more run logs. Tables per model and mode with one column per prompt version, a per record CSV, and a failures file with raw outputs. Guardrails are recomputed with the current checks.
+- Route accuracy is reported two ways: against `assigned_owner` and against a policy-consistent label (`eval/policy_labels.json`, only CS-5244 differs, QUESTIONS.md Q14). README now says `assigned_owner` is a process label, not ground truth.
+- `eval/adversarial_cases.json`: the 10 adversarial cases with expected behavior. A test checks that the rule layer gives the expected route and approvals for each. Not run. `run_eval.py` does not run them yet; scoring them needs its own code.
+- 159 unit tests pass. Nothing was run on the holdout; the only holdout commands executed were dry runs, which the lock refused.
+
+**Why:** Stage 3 of the build plan.
+
+**Choices to note:**
+- Expected approvals are `assigned_owner` (when not Support Representative) plus Support Lead when rule 7 applies. v4 and v5 merge rule layer approvals into their output, so their recall is partly true by construction.
+- The extraction subset is a fixed sample of 15 cases per split drawn with seed 6490.
+- "No order number flagged" and extraction are not computed for v1, which has no structured output.
+
+**Smoke test:** metrics were run on the Checkpoint 2 log to check the code. Those output files were deleted; they are not results.

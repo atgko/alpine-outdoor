@@ -1,0 +1,10 @@
+{
+  "description": "Policy-consistent route labels. Every case uses assigned_owner unless it is listed in overrides. An override is allowed only where a client rule in section 4 of the policy file requires a different route than the one the case was historically assigned, and the reading is a recorded team decision. Team proposed rules (T1, T2) never create an override. See README and QUESTIONS.md Q14.",
+  "overrides": {
+    "CS-5244": {
+      "route": "Support Lead",
+      "assigned_owner": "Support Representative",
+      "basis": "Client rule 4: product condition unclear (washed once, tags removed), so do not automatically approve and route for policy review or exception handling. Team decision Q2: rule 4 review goes to Support Lead."
+    }
+  }
+}

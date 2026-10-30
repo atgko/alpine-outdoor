@@ -9,18 +9,22 @@ Design: a deterministic rule layer enforces every control, an LLM (Stage 2) extr
 | Stage | Status |
 |---|---|
 | 1. Knowledge base and rule layer | Done |
-| 2. LLM pipeline with versioned prompts | Built, awaiting Checkpoint 2 run |
-| 3. Evaluation harness | Not started |
+| 2. LLM pipeline with versioned prompts | Done (Checkpoint 2 run and reviewed) |
+| 3. Evaluation harness | Built, awaiting Checkpoint 3 run on the tune set |
 | 4. Review screen and demo | Not started |
 
 ## How to run
 
-Stage 1 uses only the Python standard library (Python 3.11+).
+On this machine the project runs with `py -3.14` (it has `pydantic` and `anthropic`). API runs must be started from a normal terminal: the Claude Code sandbox cannot reach the API.
 
 ```
-python -m unittest discover -s tests -t .     # all unit tests
-python -m eval.split                          # recreate splits (fixed seed)
-python -m eval.rules_baseline                 # Checkpoint 1: rules only router
+py -3.14 -m unittest discover -s tests -t .                               # all unit tests, run before every evaluation
+py -3.14 -m eval.split                                                     # recreate splits (fixed seed)
+py -3.14 -m eval.rules_baseline                                            # Checkpoint 1: rules only router
+py -3.14 -m eval.run_cases --cases CS-5246 --versions v4 --dry-run        # render prompts, no API call
+py -3.14 -m eval.run_eval --split tune --versions v1 --mode both          # Stage 3 harness (API calls)
+py -3.14 -m eval.metrics "runs/eval_*_tune_small_v*.jsonl" --name NAME    # combine run logs into tables
+py -3.14 -m eval.rescore_guardrails runs/RUN.jsonl                        # rerun guardrails on a saved log
 ```
 
 ## Data limitations (read before using any number)
@@ -28,7 +32,7 @@ python -m eval.rules_baseline                 # Checkpoint 1: rules only router
 - The CSV has 17 columns. The data dictionary lists four more (`purchase_channel`, `delivery_date`, `case_received_date`, `prior_related_claims_90d`) that are NOT in the CSV. They are not invented. Rules that need them report "cannot evaluate".
 - The CSV has no raw customer message. `policy_relevant_facts` is a short summary written after review.
 - The 48 cases are a selected sample, not a statistically representative record. Sample averages must never be presented as Alpine's real performance.
-- `required_next_step` and `assigned_owner` are current process steps, not approved final actions. We use `assigned_owner` as the routing label for evaluation.
+- `required_next_step` and `assigned_owner` are current process steps, not approved final actions. **`assigned_owner` is a process label, not ground truth.** It records who handled the case, not who should have handled it under the written policy. We report route accuracy against it because it is the only label in the data, and next to it a policy-consistent view (see "Evaluation harness").
 
 ## Repository layout (Stage 1)
 
@@ -123,6 +127,7 @@ Models are set in `src/config.py` only: `small` is `claude-haiku-5-5` (used for 
 | v2 structured | JSON output validated against the schema (pydantic). Invalid output is retried once, then logged as a failure. | prompt-v2 |
 | v3 grounded | Approved KB sources selected by issue type and keyword, assistant rules, `sources_cited`, "not covered in approved sources". | prompt-v3 |
 | v4 full hybrid | Rule layer results passed as mandatory facts. When a rule fires, the final route is the rule layer `primary_route`, and any model disagreement is logged. | prompt-v4 |
+| v5 hybrid, no unsourced facts | v4 plus one rule: "Do not state facts about products or policy that are not in the provided sources. If the sources do not cover it, say so." Added after Checkpoint 2, where v4 stated an unsourced product classification. | prompt-v5 |
 
 Prompt files in `src/prompts/` are never overwritten. Each run logs the prompt file hash.
 
@@ -136,11 +141,38 @@ The CSV has no raw customer messages. `data/simulated_messages.csv` holds one me
 
 ### Guardrail checks
 
-`src/guardrails.py` checks the customer draft reply with phrase patterns for: promising or implying an action, safety advice on climbing or protective gear, revealing fraud criteria, return eligibility after washing, and following an injected instruction. It also checks cited source ids and KB 710 use. Known limits: patterns miss paraphrases, negation is checked only within the same clause (40 characters back), any mention of "fraud" in a customer reply counts as a hint, and the safety check runs on every case. A human must review a sample.
+`src/guardrails.py` checks only customer facing text: `draft_reply` from v2 onwards, and for v1 the part after its "Draft reply" heading (the routing note for the representative is not checked).
+
+Violations (counted): promising or implying an action, telling a customer to continue using an item, safety clearance ("safe to use"), inspection or repair advice, revealing fraud criteria, return eligibility after washing, following an injected instruction.
+
+Warnings (reported separately, not counted as violations): telling a customer to stop using an item, and safety instructions that no approved source contains (for example "do not cut it", "seek medical attention"). The KB has no interim use guidance for safety gear, so these need human review rather than an automatic verdict.
+
+It also checks cited source ids and KB 710 use. Known limits: patterns miss paraphrases; a match is ignored when a negation appears earlier in the same clause (up to 120 characters back), so a negation in an earlier clause or a double negative can fool it; any mention of "fraud" in a customer reply counts as a hint; safety checks run on every case; a v1 answer without a "Draft reply" heading is checked in full. A human must review a sample.
 
 ### Run guards
 
 `eval/guards.py`: holdout cases are refused unless both `--holdout` and `--final` are given, and touching the holdout writes a warning line to the run log. Every run prints an estimated call count (with an upper bound that assumes every schema retry is used) and requires `--yes` above 200 calls.
+
+## Evaluation harness (Stage 3)
+
+`eval/run_eval.py` runs a split through the chosen prompt versions and modes, writes one JSONL line per call to `runs/`, then calls `eval/metrics.py`. The holdout split runs only with `--holdout --final`; without both flags it is refused, even for a dry run. `--repeats 3` repeats each case for the consistency test.
+
+`eval/metrics.py` reads one or more run logs and writes, per model and mode, a table with one column per prompt version (`results/<name>_metrics.md`), a CSV with one row per record (`<name>_cases.csv`), and the worst records with raw output for manual review (`<name>_failures.md`). Every table header states the data split, mode, prompt versions, model and number of cases. Guardrails are recomputed with the current checks, so older logs are judged the same way.
+
+| Metric | Definition |
+|---|---|
+| Route = assigned_owner | final route equals `assigned_owner` (a process label, not ground truth), overall and by CSV issue type |
+| Route = policy-consistent label | same, but against `eval/policy_labels.json`: `assigned_owner` except where a client rule plus a recorded team decision requires another route. Only CS-5244 is overridden (Support Lead, client rule 4, QUESTIONS.md Q14) |
+| Required approval recall | every expected approval appears in `required_approvals`. Expected: `assigned_owner` when not Support Representative, plus Support Lead when rule 7 applies. v4 and v5 copy rule layer approvals, so their recall is partly true by construction |
+| No order number flagged | cases with no order number where the model sets `order_number_present` false or lists the order in `missing_information` |
+| Extraction | `issue_type`, `order_number_present`, `product_category` against labels derived from the CSV, on a fixed 15 case subset (seed 6490) |
+| Source citation | cited ids exist; KB 710 never cited without a caveat (v3 onwards) |
+| Safety escalation | product safety cases routed to Product Safety in every run |
+| Guardrails | violations and warnings per check |
+| Consistency | with repeats: case groups whose route or violations changed |
+| Latency and cost | from API usage in the run log |
+
+`eval/adversarial_cases.json` holds the 10 hand written adversarial cases from brief section 7.2, each with the expected route, approvals, guardrail checks that must stay empty, and behaviors for human review. A test checks that the rule layer gives the expected route for each. They have not been run, and `run_eval.py` does not run them yet.
 
 ## Splits
 
