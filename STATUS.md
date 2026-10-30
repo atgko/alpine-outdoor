@@ -11,7 +11,7 @@ Last updated: 2026-10-30. Read this first when resuming. The full brief is `clau
 | Stage 2: LLM pipeline, prompts v1 to v5 | Done. v5 added after Checkpoint 2 review |
 | Checkpoint 2: v1 to v4 on 3 cases, side by side | Done and reviewed 2026-10-30 |
 | Stage 3: evaluation harness | Built and committed 2026-10-30 (`run_eval.py`, `metrics.py`, adversarial cases, guardrail fixes) |
-| Checkpoint 3: v1 to v5 on the tune set | NOT RUN. Waiting for the user to run the commands below |
+| Checkpoint 3: v1 to v5 on the tune set | Run 2026-10-30 and committed. WAITING FOR USER REVIEW |
 | Stage 4: review screen and demo | Not started |
 | Final evaluation (section 9) | Not started. Only after an explicit "go" |
 
@@ -19,7 +19,7 @@ Repository: private GitHub repo https://github.com/atgko/alpine-outdoor (remote 
 
 ## Outstanding actions (user)
 
-1. Run Checkpoint 3 in a normal terminal (commands below), then tell Claude Code the file names printed at the end.
+1. Review Checkpoint 3: `results/checkpoint3_tune_small_metrics.md`, `results/checkpoint3_review.md` (manual guardrail verdicts and the five worst failures), and the LOG.md entry. Decide on prompt, rule and guardrail changes. Nothing changes until then.
 2. API key is set and works. The user accepted the risk of keeping the key pasted on 2026-10-28 active until the project ends, and will revoke it then. Never paste keys into chat or files.
 3. API runs cannot reach the network from the Claude Code sandbox, including `!` commands. The user runs them in a normal terminal outside Claude Code.
 
@@ -57,10 +57,10 @@ Estimate: 28 tune cases x 2 modes = 56 calls per version, 280 in total (up to 50
 
 ## Next steps once unblocked
 
-1. After Checkpoint 3 runs: show the metrics tables (`results/checkpoint3_tune_small_metrics.md`) and the five worst failures with raw outputs (from `_failures.md`), append a LOG.md entry, commit "Checkpoint 3: ...", push, and stop for review.
-2. If prompts change after review, create new versions. Never overwrite a prompt file. Tag each new version.
+1. Checkpoint 3 is done (280 records, 281 calls, $0.2507, 0 failures, 1 schema retry). Wait for the user's review. Do not change prompts, rules or guardrails before that.
+2. If prompts change after review, create new versions. Never overwrite a prompt file. Tag each new version. Open items found in Checkpoint 3: guardrail false positives on "received your refund request" and "review your refund request"; T1 misses CS-5204 and CS-5225 (Q9); no automated check for unsourced claims such as the CS-5245 v2 recall contact; v4 versus v5 needs a human comparison of drafts.
 3. Built, not run: `eval/run_adversarial.py` (adversarial set) and `eval/import_manual.py` (manual spot check). The adversarial set and the consistency test (`--repeats 3` on 10 cases) belong to the final evaluation, which needs an explicit "go". A manual spot check needs the user to paste chat outputs into the template CSV.
-4. While Checkpoint 3 runs, do not edit existing files in `src/` or `eval/` (user instruction 2026-10-30). Wait until the user says the tune runs have finished.
+4. The tune runs have finished, so the 2026-10-30 freeze on editing `src/` and `eval/` is over. Prompts and rules stay unchanged until the user has reviewed Checkpoint 3.
 
 ## Key results so far (from logged runs only)
 
@@ -113,4 +113,5 @@ Checkpoint 2 (`runs/run_20261030T224609Z_small.jsonl`, 3 tune cases, both modes,
 | 90c2b41 | Checkpoint 2: prompts v1 to v4 on 3 tune cases, side by side |
 | 717b764 | prompt v5, tagged prompt-v5 |
 | a6b05bf, ff16d5f | fix: guardrail fixes and offline rescoring; Stage 3: evaluation harness |
-| (next) | feat: adversarial runner and manual spot check import (see git log) |
+| 620c999 | feat: adversarial runner and manual spot check import |
+| (next) | Checkpoint 3: v1 to v5 on the tune set (see git log) |

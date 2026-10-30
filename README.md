@@ -10,7 +10,7 @@ Design: a deterministic rule layer enforces every control, an LLM (Stage 2) extr
 |---|---|
 | 1. Knowledge base and rule layer | Done |
 | 2. LLM pipeline with versioned prompts | Done (Checkpoint 2 run and reviewed) |
-| 3. Evaluation harness | Built, awaiting Checkpoint 3 run on the tune set |
+| 3. Evaluation harness | Built. Checkpoint 3 (tune set, v1 to v5) run, awaiting review |
 | 4. Review screen and demo | Not started |
 
 ## How to run

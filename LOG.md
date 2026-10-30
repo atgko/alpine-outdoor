@@ -149,3 +149,36 @@ One entry per experiment or build step: what changed, why, result, and anything 
 **Design:** Adversarial cases run in one mode (fields plus the SIMULATED message) and are scored separately from `metrics.py`, which refuses case ids that are not in the CSV. A case passes automatically only if the route, the approvals and its `must_not` guardrail checks are all as expected; warnings never fail a case, and the `must` behaviors are left to human review. Manual imports are written as a run log with mode `manual spot check` and scored by `metrics.py`, so they get the same route and guardrail checks as API runs. Cost and latency for manual rows are unknown and logged as 0.
 
 **Result:** No API calls, nothing run. Tests use a fake client and temporary folders, so nothing was written to `runs/` or `results/`.
+
+## 2026-10-30: Checkpoint 3, v1 to v5 on the tune set
+
+**What changed:** Nothing in code or prompts. First full run of the Stage 3 harness, made by the user in a terminal outside Claude Code. Unit tests passed first. No existing file in `src/` or `eval/` changed between the five runs, and each log has one prompt hash.
+
+**Setup:** Data split: tune (28 cases). Modes: fields only, and fields plus SIMULATED message. Prompt versions v1 to v5, one run per version. Model `claude-haiku-5-5` (Anthropic). Run logs `runs/eval_20261030T230955Z_tune_small_v1.jsonl`, `..._231525Z_..._v2`, `..._232252Z_..._v3`, `..._233215Z_..._v4`, `..._234102Z_..._v5`. Tables: `results/checkpoint3_tune_small_metrics.md` (plus `_cases.csv`, `_failures.md`). Manual review: `results/checkpoint3_review.md`.
+
+**Run health:** 280 records, 281 API calls, 0 API errors, 0 rate limit errors, 0 schema failures. One schema retry: v3 CS-5223 fields only, the first reply had a raw line break inside a JSON string ("Invalid control character"); the retry was valid. Total cost $0.2507 (estimate was about $0.26). Wall time about 40 minutes (23:10 to 23:50 UTC). Nothing ran on the holdout.
+
+**Results (28 tune cases per cell; fields only / with message):**
+
+| Metric | v1 | v2 | v3 | v4 | v5 |
+|---|---|---|---|---|---|
+| Route = assigned_owner | 23 / 23 | 20 / 18 | 18 / 21 | 25 / 25 | 25 / 25 |
+| Route = policy-consistent label | 22 / 22 | 21 / 19 | 19 / 22 | 26 / 26 | 26 / 26 |
+| Required approval recall (of 14) | n/a | 8 / 10 | 11 / 11 | 14 / 14 | 14 / 14 |
+| Safety cases to Product Safety (of 3) | 3 / 3 | 3 / 3 | 3 / 3 | 3 / 3 | 3 / 3 |
+| Records with an automated violation | 6 / 4 | 5 / 4 | 0 / 0 | 1 / 1 | 1 / 1 |
+| Records with a warning | 5 / 6 | 6 / 3 | 1 / 1 | 0 / 0 | 0 / 0 |
+
+**Findings:**
+- v4 and v5 give the same routes. Their only misses against the policy label are CS-5204 and CS-5225, both from TEAM PROPOSED rule T1 (Fulfillment Support). The model never disagreed with the rule layer. The two cases are the same ones T1 missed in Checkpoint 1 (QUESTIONS.md Q9). v1 to v3 also send CS-5204 to Fulfillment Support without any rule.
+- v3 (sources, no rules) has the lowest route accuracy in fields only mode. It over-escalates: product questions and a used item return go to Product Safety (CS-5205, CS-5222, CS-5233), and missing or delayed orders go to Shipping Support (CS-5210, CS-5218, CS-5235, and CS-5220 whose owner is Fulfillment Support). v1 and v2 make several of the same moves, plus CS-5241 (stove question) to Product Safety.
+- Approval recall reaches 14/14 only in v4 and v5, which copy the rule layer approvals, so this is partly true by construction.
+- Manual review of all 23 flagged records (`results/checkpoint3_review.md`): v1 6 true, 2 borderline, 2 false positives; v2 2 true, 2 borderline, 5 false positives; v4 and v5 2 false positives each. Every v3 to v5 violation is a false positive, mostly "We have received your refund request" matching the promise pattern. v4 and v5 have no confirmed guardrail violation on the tune set.
+- The automated checks missed one real problem: v2 on CS-5245 points the customer to "the recall contact information listed in the official recall notice", which is in no approved source.
+- v5 shows no measurable difference from v4 on these metrics. Its rule targets unsourced facts, which no automated metric measures; it needs a human comparison of v4 and v5 drafts.
+- Extraction of `issue_type` misses are mostly return versus refund on cases labeled Return with a refund requested (CS-5219, CS-5239, CS-5244), which is a label ambiguity more than a model error.
+
+**Failures and deviations:**
+- The guardrail promise pattern gives false positives on "received your refund request" and "review your refund request". Not fixed: the user asked for no changes before review.
+- The automated severity score in `_failures.md` ranks false positives near the top. The five worst failures were chosen by manual review instead.
+- 28 tune cases, simulated messages, one model, one run each: not evidence of accuracy and not representative. The tune set was used to write the rules and the guardrail patterns.
