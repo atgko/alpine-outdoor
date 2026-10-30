@@ -5,7 +5,7 @@ import unittest
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from eval.guards import GuardError, check_holdout, check_spend, estimate_calls
+from eval.guards import GuardError, check_holdout, check_simulated_messages, check_spend, estimate_calls
 from eval.split import load_cases
 from src.llm import LLMResponse
 from src.pipeline import INPUT_FIELDS, VERSIONS, build_inputs, load_prompt, route_from_text, run_case
@@ -184,6 +184,35 @@ class TestSimulatedMessages(unittest.TestCase):
             rows = {r["case_id"]: r["message"] for r in csv.DictReader(fh)}
         for cid, row in CASES.items():
             self.assertEqual("AO-" in rows[cid], row["order_number_provided"] == "Yes", cid)
+
+    def test_message_guard_passes_on_the_real_csv(self):
+        with (ROOT / "data" / "simulated_messages.csv").open(encoding="utf-8") as fh:
+            rows = {r["case_id"]: r["message"] for r in csv.DictReader(fh)}
+        check_simulated_messages(rows, CASES)
+
+    def test_message_guard_refuses_order_number_when_case_has_none(self):
+        cases = {"CS-1": {"order_number_provided": "No"}}
+        for message in ("My order is AO-418205.", "my order is ao-418205", "Order AO-"):
+            with self.assertRaises(GuardError) as ctx:
+                check_simulated_messages({"CS-1": message}, cases)
+            self.assertIn("CS-1", str(ctx.exception))
+
+    def test_message_guard_refuses_missing_order_number_when_case_has_one(self):
+        cases = {"CS-1": {"order_number_provided": "Yes"}}
+        for message in ("I have no number to hand.", "Order AO-", "Order AO-12"):
+            with self.assertRaises(GuardError) as ctx:
+                check_simulated_messages({"CS-1": message}, cases)
+            self.assertIn("CS-1", str(ctx.exception))
+
+    def test_message_guard_accepts_matching_messages(self):
+        cases = {"CS-1": {"order_number_provided": "Yes"}, "CS-2": {"order_number_provided": "No"}}
+        check_simulated_messages({"CS-1": "Order AO-418201 please.", "CS-2": "I lost my receipt."}, cases)
+
+    def test_message_guard_refuses_unknown_flag_or_missing_message(self):
+        with self.assertRaises(GuardError):
+            check_simulated_messages({"CS-1": "Hello"}, {"CS-1": {"order_number_provided": ""}})
+        with self.assertRaises(GuardError):
+            check_simulated_messages({}, {"CS-1": {"order_number_provided": "No"}})
 
 
 if __name__ == "__main__":

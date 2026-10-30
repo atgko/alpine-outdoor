@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from eval.guards import GuardError, check_holdout, check_spend, estimate_calls, split_of
+from eval.guards import GuardError, check_holdout, check_simulated_messages, check_spend, estimate_calls, split_of
 from eval.split import load_cases
 from src import config
 from src.pipeline import VERSIONS, build_inputs, run_case
@@ -80,6 +80,8 @@ def main(argv=None) -> None:
     messages = load_messages() if True in modes else {}
     splits = split_of(args.cases)
     try:
+        if messages:
+            check_simulated_messages(messages, cases)
         warnings = check_holdout(args.cases, args.holdout, args.final)
         expected, upper = estimate_calls(len(args.cases), args.versions, len(modes))
         check_spend(expected, upper, args.yes)

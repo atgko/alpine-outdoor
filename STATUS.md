@@ -1,6 +1,6 @@
 # Project Status and Handoff
 
-Last updated: 2026-10-28. Read this first when resuming. The full brief is `claude_code_build_prompt.md`; section 10 (rules for how we work) applies to the whole project.
+Last updated: 2026-10-30. Read this first when resuming. The full brief is `claude_code_build_prompt.md`; section 10 (rules for how we work) applies to the whole project.
 
 ## Where we are
 
@@ -8,8 +8,8 @@ Last updated: 2026-10-28. Read this first when resuming. The full brief is `clau
 |---|---|
 | Stage 1: knowledge base and rule layer | Done, committed |
 | Checkpoint 1: rules only baseline | Done, committed |
-| Stage 2: LLM pipeline, prompts v1 to v4 | Built and committed. No API call made yet |
-| Checkpoint 2: v1 to v4 on 3 cases, side by side | NOT RUN. Waiting on the actions below |
+| Stage 2: LLM pipeline, prompts v1 to v4 | Built and committed |
+| Checkpoint 2: v1 to v4 on 3 cases, side by side | Run and committed 2026-10-30. WAITING FOR USER REVIEW |
 | Stage 3: evaluation harness | Not started |
 | Stage 4: review screen and demo | Not started |
 | Final evaluation (section 9) | Not started. Only after an explicit "go" |
@@ -18,29 +18,32 @@ Repository: private GitHub repo https://github.com/atgko/alpine-outdoor (remote 
 
 ## Outstanding actions (user)
 
-1. Install the SDK: `! pip install anthropic`. The Claude Code sandbox cannot reach PyPI (SSL certificate error), so this must be run by the user.
-2. Rotate the Anthropic API key. The key pasted in chat on 2026-10-28 is in the transcript and should be revoked. It also has an unusual prefix (`sk-ant-usr-`), so it may not be a valid API key. Create a new key in the Anthropic Console.
-3. Set the new key outside the chat: `setx ANTHROPIC_API_KEY "<new key>"`, then restart Claude Code. Never paste keys into chat or files.
-4. Approve the model names: `claude-haiku-5-5` (small, used for development) and `claude-opus-5-5` (large, for comparison). Both are set in `src/config.py`.
-5. Approve the Checkpoint 2 run: 24 calls expected, 42 at most, estimated under $0.10 on Haiku (an estimate, not a measurement).
-6. Review the 5 example simulated messages (CS-5203, CS-5213, CS-5236, CS-5244, CS-5246) and approve `data/simulated_messages.csv` or request changes.
-7. Decide whether Claude should push to GitHub after each stage and checkpoint commit, or only commit locally.
+1. Review Checkpoint 2 (LOG.md entry of 2026-10-30 and `results/run_20261030T224609Z_small_side_by_side.md`) and decide whether prompts change before Stage 3.
+2. API key is set and works. The user accepted the risk of keeping the key pasted on 2026-10-28 active until the project ends, and will revoke it then. Never paste keys into chat or files.
+3. API runs cannot reach the network from the Claude Code sandbox, including `!` commands. The user runs them in a normal terminal outside Claude Code.
+
+## Approved on 2026-10-30
+
+- Checkpoint 2 run on `claude-haiku-5-5`: 24 calls expected, 42 at most. `claude-opus-5-5` is not used yet.
+- Push to origin after each stage and checkpoint commit.
+- The five simulated messages shown for review.
+- JSON validation after the reply stays, and refusal fallback stays off.
+
+## Python interpreter
+
+`python` on PATH is the `hermes-agent` venv (3.11), which has no `anthropic` and belongs to another tool. Do not install into it. `pip` installs into Python 3.14, so run the project with `py -3.14`.
 
 ## Outstanding decisions (before later stages)
 
-- **Demo cases in the holdout.** Three of the five Stage 4 demo cases (CS-5201, CS-5208, CS-5209) are in the locked holdout split. Options: swap them for similar tune cases, or accept that the demo touches the holdout and log it.
+- **Demo cases in the holdout: resolved 2026-10-30.** The user chose to replace the holdout demo cases with tune cases. Stage 4 order: CS-5219 (clean return, replaces CS-5201), CS-5227 (no order number), CS-5242 ($1,200 refund, replaces CS-5209), CS-5229 (rope sheath abrasion, replaces CS-5208), CS-5244 (washed jacket, KB 510). This overrides the list in section 8.2 of the brief.
 - **Gemini.** Not configured. Before Stage 3, check the current Google docs for model names and free tier limits, report them, and get confirmation before any Gemini call. The Gemini SDK must also be installed by the user.
-- **Refusal fallback is off.** It would silently swap the model and mix models in comparisons. Refusals are logged as failures. The user may ask to turn it on.
+- **Refusal fallback is off, confirmed by the user 2026-10-30.** It would silently swap the model and mix models in comparisons. Refusals are logged as failures.
 
 ## Next steps once unblocked
 
-1. Run the unit tests: `python -m unittest discover -s tests -t .` (118 tests, all passing as of the last commit).
-2. Run Checkpoint 2:
-   `python -m eval.run_cases --cases CS-5246 CS-5229 CS-5244 --versions v1 v2 v3 v4 --mode both --model small`
-   (add `--dry-run` first to see the prompts without any API call). If the sandbox cannot reach the API, the user runs it with `!`.
-3. Show the side by side report (`results/run_*_side_by_side.md`), append a LOG.md entry, commit "Checkpoint 2: ...", and stop for review.
-4. If prompts change after review, create new versions. Never overwrite a prompt file. Tag each new version.
-5. Then Stage 3: `eval/run_eval.py`, `eval/metrics.py`, `eval/adversarial_cases.json`, `eval/import_manual.py`, consistency test. Run v1 to v4 on the tune set only (Checkpoint 3).
+1. Checkpoint 2 is done (run `run_20261030T224609Z_small`, 24/24 ok, $0.0212). Wait for the user's review.
+2. If prompts change after review, create new versions. Never overwrite a prompt file. Tag each new version. Candidate issues are listed in the LOG.md Checkpoint 2 findings, including 4 guardrail false positives.
+3. Then Stage 3: `eval/run_eval.py`, `eval/metrics.py`, `eval/adversarial_cases.json`, `eval/import_manual.py`, consistency test. Run v1 to v4 on the tune set only (Checkpoint 3).
 
 ## Key results so far (from logged runs only)
 
@@ -66,7 +69,7 @@ T2 (stalled shipment) helps by 2 cases. T1 (fulfillment error) is net minus 1. T
 
 ## Environment notes
 
-- Python 3.11. `pydantic` is installed; `anthropic` and `pandas` are not.
+- Run with `py -3.14`, which has `pydantic` and `anthropic`. See "Python interpreter" above.
 - Tests use the standard library `unittest` because pytest could not be installed.
 - `.gitattributes` is `* text=auto eol=lf`.
 - Do not use em dashes in README or log text.
