@@ -94,3 +94,11 @@ One entry per experiment or build step: what changed, why, result, and anything 
 - Two earlier attempts from inside the Claude Code sandbox could not reach the API (`APIConnectionError` on every attempt, $0 spent). Their logs are kept: `runs/run_20261030T223718Z_small.jsonl` (empty, stopped) and `runs/run_20261030T223902Z_small.jsonl` (3 failed records, stopped). The successful run was made by the user in a terminal outside Claude Code.
 - `run_cases.py` stdout is buffered when redirected, so progress is not visible until the run ends.
 - Three cases, simulated messages, one model: not evidence of accuracy.
+
+## 2026-10-30: Prompt v5 (v4 plus a rule against unsourced facts)
+
+**What changed:** Added `src/prompts/v5.md`, a copy of v4 with one new rule (11): "Do not state facts about products or policy that are not in the provided sources. If the sources do not cover it, say so." The pipeline treats v5 like v4 (sources, rule layer results, route override). v1 to v4 are unchanged. Tagged `prompt-v5`.
+
+**Why:** User decision after the Checkpoint 2 review. In Checkpoint 2, v4 on CS-5246 (with message) stated that a roof tent "is camping equipment rather than climbing, protective, or safety equipment, so Product Safety review is not triggered by category". No approved source says this. v3 on the same case correctly said the sources do not cover it. Rule 1 already asks for "not covered in approved sources", but it is phrased around answering, not around volunteering facts.
+
+**Result:** Unit tests pass, including a test that v5 equals v4 apart from rule 11. No API calls made. The effect of v5 is not measured yet; it will be measured in Checkpoint 3 on the tune set.

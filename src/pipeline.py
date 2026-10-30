@@ -1,9 +1,9 @@
 """Run one case end to end for one prompt version and return a log record.
 
-Steps: build the prompt (case, plus sources from v3, plus rule flags in v4),
-call the model, validate JSON (v2 to v4, one retry on invalid output), apply
-the rule layer override (v4), run guardrail checks, and return everything
-needed for the JSONL run log.
+Steps: build the prompt (case, plus sources from v3, plus rule flags from v4),
+call the model, validate JSON (v2 onwards, one retry on invalid output), apply
+the rule layer override (v4 and v5), run guardrail checks on the customer
+facing text, and return everything needed for the JSONL run log.
 """
 from __future__ import annotations
 
@@ -20,7 +20,9 @@ from src.rules import FIRED, RuleResult, evaluate
 from src.schema import ROUTES, SCHEMA_TEMPLATE, parse_output
 
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
-VERSIONS = ("v1", "v2", "v3", "v4")
+VERSIONS = ("v1", "v2", "v3", "v4", "v5")
+GROUNDED = {"v3", "v4", "v5"}  # approved sources in the prompt
+HYBRID = {"v4", "v5"}  # rule layer results in the prompt, plus the route override
 FIELDS_ONLY, WITH_MESSAGE = "fields_only", "fields_plus_simulated_message"
 
 # Only these CSV fields are shown to the model. required_next_step,
@@ -88,10 +90,10 @@ def route_from_text(text: str) -> str | None:
 def build_inputs(version: str, row: dict[str, str], message: str | None):
     prompt = load_prompt(version)
     facts = from_csv_row(row)
-    rule_result = evaluate(facts) if version == "v4" else None
+    rule_result = evaluate(facts) if version in HYBRID else None
     issue_type = ISSUE_TYPE_MAP.get(row["issue_type"], "other")
     sources = select_sources(issue_type, f"{row['policy_relevant_facts']} {message or ''}") \
-        if version in ("v3", "v4") else ()
+        if version in GROUNDED else ()
     user = (prompt.user.replace("{{case}}", render_case(row, message))
             .replace("{{schema}}", SCHEMA_TEMPLATE)
             .replace("{{sources}}", render_sources(sources))

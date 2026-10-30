@@ -61,17 +61,26 @@ class TestPrompts(unittest.TestCase):
             _, user, *_ = build_inputs(v, CASES["CS-5244"], "test message")
             self.assertNotIn("{{", user, v)
 
-    def test_sources_only_in_v3_and_v4(self):
-        for v, expected in (("v1", False), ("v2", False), ("v3", True), ("v4", True)):
+    def test_sources_only_from_v3(self):
+        for v, expected in (("v1", False), ("v2", False), ("v3", True), ("v4", True), ("v5", True)):
             _, user, sources, _ = build_inputs(v, CASES["CS-5244"], None)
             self.assertEqual("KB-510" in user, expected, v)
             self.assertEqual(bool(sources), expected, v)
 
-    def test_rules_only_in_v4(self):
-        _, user, _, rules = build_inputs("v4", CASES["CS-5246"], None)
-        self.assertIn("Primary route from rule layer: Warranty Team", user)
-        self.assertIsNotNone(rules)
+    def test_rules_only_in_v4_and_v5(self):
+        for v in ("v4", "v5"):
+            _, user, _, rules = build_inputs(v, CASES["CS-5246"], None)
+            self.assertIn("Primary route from rule layer: Warranty Team", user)
+            self.assertIsNotNone(rules)
         self.assertIsNone(build_inputs("v3", CASES["CS-5246"], None)[3])
+
+    def test_v5_is_v4_plus_one_rule(self):
+        v4, v5 = load_prompt("v4"), load_prompt("v5")
+        added = "11. Do not state facts about products or policy that are not in the provided sources. " \
+                "If the sources do not cover it, say so."
+        self.assertIn(added, v5.system)
+        self.assertEqual(v5.system.replace(added + "\n", ""), v4.system)
+        self.assertEqual(v5.user, v4.user)
 
 
 class TestRunCase(unittest.TestCase):
@@ -85,6 +94,11 @@ class TestRunCase(unittest.TestCase):
     def test_v4_agreement_is_logged_as_false(self):
         rec = run_case(CASES["CS-5246"], "v4", FakeClient([triage_json(recommended_route="Warranty Team")]), "tune")
         self.assertFalse(rec["model_disagreed_with_rules"])
+
+    def test_v5_overrides_like_v4(self):
+        rec = run_case(CASES["CS-5246"], "v5", FakeClient([triage_json()]), "tune")
+        self.assertEqual(rec["final_route"], "Warranty Team")
+        self.assertTrue(rec["model_disagreed_with_rules"])
 
     def test_v3_has_no_override(self):
         rec = run_case(CASES["CS-5246"], "v3", FakeClient([triage_json()]), "tune")
