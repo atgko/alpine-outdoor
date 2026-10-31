@@ -13,13 +13,13 @@ Last updated: 2026-10-31. Read this first when resuming. The full brief is `clau
 | Stage 3: evaluation harness | Built and committed 2026-10-30 (`run_eval.py`, `metrics.py`, adversarial cases, guardrail fixes) |
 | Checkpoint 3: v1 to v5 on the tune set | Run and reviewed 2026-10-30. Decisions applied. v4 vs v5 sheet scored 2026-10-31: v5 is the final configuration, chosen as a tie-break |
 | Stage 4: review screen and demo | Review screen built 2026-10-30 (`src/review_app.py`, Replay and Live, audit log, Evaluation tab). Live mode not yet run. Demo script (`demo.py`, `DEMO.md`) not started |
-| Final evaluation (section 9) | "Go" given 2026-10-31 with limits (see below). Commands handed to the user. Not run yet |
+| Final evaluation (section 9) | Adversarial set and holdout run and reviewed 2026-10-31 (70 calls, $0.0732). The holdout is used up. Consistency test and `results/summary.md` not done |
 
 Repository: private GitHub repo https://github.com/atgko/alpine-outdoor (remote `origin`, branch `main`). Tags `prompt-v1` to `prompt-v5` are pushed.
 
 ## Outstanding actions (user)
 
-1. Run the final evaluation commands below in a normal terminal, then report back and ask for the review.
+1. Read the v5 drafts for CS-5208 and CS-5217 and the ADV-09 outputs (LOG.md entry of 2026-10-31 has the findings).
 2. Try the review screen: `py -3.14 -m src.review_app` in a normal terminal, open http://127.0.0.1:5000. Replay works without the key; Live mode makes real API calls and logs them to `runs/live_<date>.jsonl`. Flask 3.1.3 was installed into Python 3.14 on 2026-10-30.
 2. API key is set and works. The user accepted the risk of keeping the key pasted on 2026-10-28 active until the project ends, and will revoke it then. Never paste keys into chat or files.
 3. API runs cannot reach the network from the Claude Code sandbox, including `!` commands. The user runs them in a normal terminal outside Claude Code.
@@ -52,7 +52,9 @@ Limits set by the user:
 3. Rule T1 stays as is, as decided for the midterm.
 4. No changes to prompts, rules or guardrails after the holdout run, and no second holdout run.
 
-Commands (user runs them in a normal terminal):
+Results: holdout v5 (20 cases per mode, fields only / with message): route 19/20 / 19/20 against both labels, approval recall 10/10 / 10/10, no order number flagged 1/1 / 1/1, violations 0 / 0, warnings 0 / 1, $0.0440. Adversarial automated pass of 10: v1 5, v3 8, v5 9; the v5 failure (ADV-07 `safety_clearance`) is a false positive on manual review. The holdout tests the prompts, not the rules, which were written knowing all 48 cases. Do not run it again.
+
+Commands as run by the user (for the record, do not rerun the last line):
 
 ```
 cd "C:\Users\athav\OneDrive\Documents\Alpine Outdoor"
@@ -86,8 +88,8 @@ Estimate: 28 tune cases x 2 modes = 56 calls per version, 280 in total (up to 50
 
 1. Checkpoint 3 is done (280 records, 281 calls, $0.2507, 0 failures, 1 schema retry) and reviewed. Decisions of 2026-10-30 are applied: receipt false positive fixed and the five tune logs rescored (v4 and v5 now 0 violations), T1 unchanged for the midterm (Q9), no unsourced-claims check (README known limitation), v4 vs v5 review sheet created and scored.
 2. Known guardrail limits, not fixed: false positives on v2 CS-5236 with message and v2 CS-5245 fields only; a promise more than two words after "we have" is missed; the stop use style line in v4 and v5 CS-5236 ("not to rely on the harness") found in manual scoring raised no warning.
-3. Next: the user runs the final evaluation commands above and asks for the review. Do not start the review before that.
-4. T1: the QUESTIONS.md Q9 plan to disable or refine T1 and rerun the tune set before any holdout run is not being followed for this holdout run (limit 3). Any later T1 change cannot be checked on the holdout (limit 4), and any such result must be reported as tune only.
+3. Next: wait for the user. Remaining from brief section 9, not part of this go: consistency test, adversarial set on v2 and v4, other providers, `results/summary.md`.
+4. T1: the holdout ran with T1 as written (QUESTIONS.md Q9). Any later T1 change cannot be checked on the holdout (limit 4), and any such result must be reported as tune only.
 5. Prompts, rules and guardrails are frozen from now on. Built, not run: `eval/import_manual.py` (manual spot check) needs the user to paste chat outputs into the template CSV.
 
 ## Key results so far (from logged runs only)
@@ -146,4 +148,5 @@ Checkpoint 2 (`runs/run_20261030T224609Z_small.jsonl`, 3 tune cases, both modes,
 | 5d204f7 | fix: receipt is not a promise; Checkpoint 3 decisions |
 | bff638e | Stage 4: review screen |
 | 2233c79 | v4 vs v5 sheet scored by the user (GitHub web edit) |
-| (next) | Final configuration and go recorded (see git log) |
+| b6cf048 | Final configuration and go recorded |
+| (next) | Final evaluation: adversarial set and holdout, reviewed (see git log) |
