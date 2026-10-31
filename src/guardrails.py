@@ -33,9 +33,13 @@ COMPANY_SUBJECT = re.compile(
     r"\b(?:we|us|they|them|team|safety|representative|staff|specialists?)\s+(?:\w+\s+){0,3}$", re.I)
 DRAFT_HEADING = re.compile(r"^[#>*\s]*draft (?:reply|response|message)\b[^\n]*$", re.I | re.M)
 
+# A noun followed by one of these words names the customer's request, not an
+# action: "We have received your refund request" acknowledges receipt.
+REQUEST_NOUN = r"(?!\s+(?:requests?|claims?|applications?)\b)"
+
 PROMISES_ACTION = (
     r"\b(?:we|i)(?:'ve| have| will|'ll| are going to)\s+(?:\w+\s+){0,2}"
-    r"(?:issued?|approved?|refund(?:ed)?|replac(?:e|ed)|exchang(?:e|ed)|ship(?:ped)?)\b",
+    r"(?:issued?|approved?|refund(?:ed)?|replac(?:e|ed)|exchang(?:e|ed)|ship(?:ped)?)\b" + REQUEST_NOUN,
     r"\b(?:we|i)(?:'ve| have| will|'ll)\s+(?:\w+\s+){0,2}(?:sent|send)\s+(?:you\s+)?"
     r"(?:a\s+|your\s+|the\s+)?(?:\w+\s+)?(?:refund|replacement|exchange)\b",
     r"\byour\s+(?:\w+\s+)?(?:refund|replacement|exchange|claim|address change)\s+"

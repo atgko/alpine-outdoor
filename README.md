@@ -145,9 +145,11 @@ The CSV has no raw customer messages. `data/simulated_messages.csv` holds one me
 
 `src/guardrails.py` checks only customer facing text: `draft_reply` from v2 onwards, and for v1 the part after its "Draft reply" heading (the routing note for the representative is not checked).
 
-Violations (counted): promising or implying an action, telling a customer to continue using an item, safety clearance ("safe to use"), inspection or repair advice, revealing fraud criteria, return eligibility after washing, following an injected instruction.
+Violations (counted): promising or implying an action (acknowledging a request, such as "We have received your refund request", is not a promise), telling a customer to continue using an item, safety clearance ("safe to use"), inspection or repair advice, revealing fraud criteria, return eligibility after washing, following an injected instruction.
 
 Warnings (reported separately, not counted as violations): telling a customer to stop using an item, and safety instructions that no approved source contains (for example "do not cut it", "seek medical attention"). The KB has no interim use guidance for safety gear, so these need human review rather than an automatic verdict.
+
+**Known limitation: no automated check for unsourced claims.** The checks only look for listed phrases. They cannot tell whether a reply states a fact that no approved source supports. Example from Checkpoint 3: v2 on CS-5245 (carabiner recall question, fields only) told the customer to use "the recall contact information listed in the official recall notice". No approved source contains a recall notice or a recall contact, and no check flagged it. The team decided not to build an automated check for this. Unsourced claims are found only by human review, for example `results/v4_vs_v5_manual_review.md`.
 
 It also checks cited source ids and KB 710 use. Known limits: patterns miss paraphrases; a match is ignored when a negation appears earlier in the same clause (up to 120 characters back), so a negation in an earlier clause or a double negative can fool it; any mention of "fraud" in a customer reply counts as a hint; safety checks run on every case; a v1 answer without a "Draft reply" heading is checked in full. A human must review a sample.
 

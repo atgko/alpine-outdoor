@@ -182,3 +182,25 @@ One entry per experiment or build step: what changed, why, result, and anything 
 - The guardrail promise pattern gives false positives on "received your refund request" and "review your refund request". Not fixed: the user asked for no changes before review.
 - The automated severity score in `_failures.md` ranks false positives near the top. The five worst failures were chosen by manual review instead.
 - 28 tune cases, simulated messages, one model, one run each: not evidence of accuracy and not representative. The tune set was used to write the rules and the guardrail patterns.
+
+## 2026-10-30: Checkpoint 3 decisions: receipt guardrail fix, T1 note, v4 vs v5 review sheet
+
+**What changed (user decisions after the Checkpoint 3 review):**
+- Guardrails: the first promise pattern no longer matches when the noun is followed by "request", "claim" or "application", so acknowledging receipt ("We have received your refund request") is not a promise. The same change also clears "We will review your refund request" (v2 CS-5203), which was the same kind of false positive. New unit tests for both, plus checks that real promises are still caught. 182 tests pass.
+- QUESTIONS.md Q9: T1 lowers accuracy; it stays unchanged for the midterm, and the planned change for the final submission is to disable or refine it.
+- README: no automated check for unsourced claims, recorded as a known limitation with the CS-5245 v2 recall contact example. No check was built, by decision.
+- `results/v4_vs_v5_manual_review.md`: v4 and v5 drafts side by side for 8 tune cases (CS-5246, CS-5229, CS-5244, CS-5245, CS-5222, CS-5236, CS-5241, CS-5248), all in the with message mode, copied from the Checkpoint 3 logs, with a blank scoring row per pair for unsupported facts, promised outcomes and safety advice. Not scored yet.
+
+**Rescoring (no API calls, run logs not modified):** the five Checkpoint 3 tune logs, 28 cases, both modes, claude-haiku-5-5. Per run tables: `results/eval_20261030T*_tune_small_v*_guardrails_rescored.md`. Combined tables: `results/checkpoint3_tune_small_rescored_metrics.md` (the original `checkpoint3_tune_small_metrics.md` is kept unchanged).
+
+| Version | Violation checks old / new | Records with a violation, fields only, old / new | Records with a violation, with message, old / new |
+|---|---|---|---|
+| v1 | 10 / 8 | 6 / 5 | 4 / 3 |
+| v2 | 10 / 7 | 5 / 2 | 4 / 4 |
+| v3 | 0 / 0 | 0 / 0 | 0 / 0 |
+| v4 | 2 / 0 | 1 / 0 | 1 / 0 |
+| v5 | 2 / 0 | 1 / 0 | 1 / 0 |
+
+The 9 records cleared (v1 2, v2 3, v4 2, v5 2) are exactly the 9 "received" or "review your refund request" false positives in `results/checkpoint3_review.md`. Warnings did not change. Still flagged and still false positives on manual review: v2 CS-5236 with message ("whether the harness is safe to use and whether it is covered under warranty") and v2 CS-5245 fields only ("check your carabiner's serial number").
+
+**Failures and deviations:** while writing the test, a sentence with the promise four words after "We have" ("We have received your return and issued your refund") was found not to be flagged. This gap existed before the change (the pattern allows at most two words in between) and is not fixed. The fix was written after seeing these outputs, so zero false positives of this kind on the tune set is not evidence about new outputs.

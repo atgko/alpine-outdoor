@@ -37,6 +37,7 @@ The proposed rule says "Shipping Support or Fulfillment Support".
 ## Q9. When does a fulfillment error go to Fulfillment Support? (TEAM PROPOSED rule T1)
 In the sample, CS-5214 (wrong tent) and CS-5223 (two left boots) went to Fulfillment Support, but CS-5204 (wrong jacket color) and CS-5237 (different model) went to Support Representative. The keyword "duplicate" also matches CS-5225, where the customer ordered twice by mistake (not a fulfillment error).
 **Team decision:** keep T1 as written, do not tune it to the data, and report results with and without it. **Open for the client:** what decides whether a pick error is handled by a representative or by Fulfillment Support?
+**Update 2026-10-30 (after Checkpoint 3):** T1 lowers accuracy. Rules only (Checkpoint 1, all 48 cases) it is net minus 1 case. In Checkpoint 3 (tune set, 28 cases, claude-haiku-5-5) the only v4 and v5 route misses against the policy label are CS-5204 and CS-5225, both caused by T1, in both modes. **Decision:** leave T1 unchanged for the midterm. **Planned change for the final submission:** disable T1 or refine it (for example, exclude "duplicate" orders placed by the customer, as in CS-5225), then rerun the tune set before any holdout run.
 
 ## Q10. Store returns cannot be identified
 `purchase_channel` is not in the CSV, so rule 3 (store return) can never be evaluated from the data.

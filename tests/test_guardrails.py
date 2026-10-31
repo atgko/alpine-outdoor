@@ -23,6 +23,23 @@ class TestPromisesAction(unittest.TestCase):
             self.assertEqual(check_draft(text)["promises_action"], [], text)
 
 
+class TestReceiptIsNotAPromise(unittest.TestCase):
+    """Checkpoint 3 false positives (v1, v2, v4, v5 on CS-5213, CS-5244, CS-5248)."""
+
+    def test_acknowledging_a_request_is_clean(self):
+        for text in ("We have received your refund request and our team is reviewing it.",
+                     "We've received your refund request for the jacket and your note about your address.",
+                     "We will review your refund request as soon as the carrier investigation is complete.",
+                     "We have received your replacement request."):
+            self.assertEqual(check_draft(text)["promises_action"], [], text)
+
+    def test_promises_are_still_flagged(self):
+        for text in ("We have issued your refund.", "We'll refund the $47.00.",
+                     "We'll issue your refund of $68 to your original payment method.",
+                     "We'll arrange an exchange for the correct color."):
+            self.assertTrue(check_draft(text)["promises_action"], text)
+
+
 class TestSafetyViolations(unittest.TestCase):
     def test_continue_using_is_a_violation(self):
         for text in ("You can continue using the harness until then.", "You can keep using the rope."):

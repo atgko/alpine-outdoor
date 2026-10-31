@@ -11,7 +11,7 @@ Last updated: 2026-10-30. Read this first when resuming. The full brief is `clau
 | Stage 2: LLM pipeline, prompts v1 to v5 | Done. v5 added after Checkpoint 2 review |
 | Checkpoint 2: v1 to v4 on 3 cases, side by side | Done and reviewed 2026-10-30 |
 | Stage 3: evaluation harness | Built and committed 2026-10-30 (`run_eval.py`, `metrics.py`, adversarial cases, guardrail fixes) |
-| Checkpoint 3: v1 to v5 on the tune set | Run 2026-10-30 and committed. WAITING FOR USER REVIEW |
+| Checkpoint 3: v1 to v5 on the tune set | Run and reviewed 2026-10-30. Decisions applied. v4 vs v5 manual scoring open |
 | Stage 4: review screen and demo | Not started |
 | Final evaluation (section 9) | Not started. Only after an explicit "go" |
 
@@ -19,7 +19,7 @@ Repository: private GitHub repo https://github.com/atgko/alpine-outdoor (remote 
 
 ## Outstanding actions (user)
 
-1. Review Checkpoint 3: `results/checkpoint3_tune_small_metrics.md`, `results/checkpoint3_review.md` (manual guardrail verdicts and the five worst failures), and the LOG.md entry. Decide on prompt, rule and guardrail changes. Nothing changes until then.
+1. Score `results/v4_vs_v5_manual_review.md` (8 pairs, one row each), then decide whether v4 or v5 is the final configuration.
 2. API key is set and works. The user accepted the risk of keeping the key pasted on 2026-10-28 active until the project ends, and will revoke it then. Never paste keys into chat or files.
 3. API runs cannot reach the network from the Claude Code sandbox, including `!` commands. The user runs them in a normal terminal outside Claude Code.
 
@@ -57,8 +57,9 @@ Estimate: 28 tune cases x 2 modes = 56 calls per version, 280 in total (up to 50
 
 ## Next steps once unblocked
 
-1. Checkpoint 3 is done (280 records, 281 calls, $0.2507, 0 failures, 1 schema retry). Wait for the user's review. Do not change prompts, rules or guardrails before that.
-2. If prompts change after review, create new versions. Never overwrite a prompt file. Tag each new version. Open items found in Checkpoint 3: guardrail false positives on "received your refund request" and "review your refund request"; T1 misses CS-5204 and CS-5225 (Q9); no automated check for unsourced claims such as the CS-5245 v2 recall contact; v4 versus v5 needs a human comparison of drafts.
+1. Checkpoint 3 is done (280 records, 281 calls, $0.2507, 0 failures, 1 schema retry) and reviewed. Decisions of 2026-10-30 are applied: receipt false positive fixed and the five tune logs rescored (v4 and v5 now 0 violations), T1 unchanged for the midterm (Q9), no unsourced-claims check (README known limitation), v4 vs v5 review sheet created. Stop and wait for the user.
+2. Open: the user scores the v4 vs v5 sheet. Remaining known guardrail false positives: v2 CS-5236 with message, v2 CS-5245 fields only. Known guardrail gap: a promise more than two words after "we have" is missed.
+3. For the final submission: disable or refine T1 (Q9) and rerun the tune set before any holdout run. If prompts change, create new versions, never overwrite a prompt file, and tag each one.
 3. Built, not run: `eval/run_adversarial.py` (adversarial set) and `eval/import_manual.py` (manual spot check). The adversarial set and the consistency test (`--repeats 3` on 10 cases) belong to the final evaluation, which needs an explicit "go". A manual spot check needs the user to paste chat outputs into the template CSV.
 4. The tune runs have finished, so the 2026-10-30 freeze on editing `src/` and `eval/` is over. Prompts and rules stay unchanged until the user has reviewed Checkpoint 3.
 
@@ -114,4 +115,5 @@ Checkpoint 2 (`runs/run_20261030T224609Z_small.jsonl`, 3 tune cases, both modes,
 | 717b764 | prompt v5, tagged prompt-v5 |
 | a6b05bf, ff16d5f | fix: guardrail fixes and offline rescoring; Stage 3: evaluation harness |
 | 620c999 | feat: adversarial runner and manual spot check import |
-| (next) | Checkpoint 3: v1 to v5 on the tune set (see git log) |
+| bbb9c6d | Checkpoint 3: v1 to v5 on the tune set |
+| (next) | fix: receipt is not a promise; Checkpoint 3 decisions (see git log) |
