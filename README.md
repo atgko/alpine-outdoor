@@ -11,7 +11,7 @@ Design: a deterministic rule layer enforces every control, an LLM (Stage 2) extr
 | 1. Knowledge base and rule layer | Done |
 | 2. LLM pipeline with versioned prompts | Done (Checkpoint 2 run and reviewed) |
 | 3. Evaluation harness | Built. Checkpoint 3 (tune set, v1 to v5) run, awaiting review |
-| 4. Review screen and demo | Not started |
+| 4. Review screen and demo | Review screen built (`src/review_app.py`). Demo script not started |
 
 ## How to run
 
@@ -27,6 +27,7 @@ py -3.14 -m eval.metrics "runs/eval_*_tune_small_v*.jsonl" --name NAME    # comb
 py -3.14 -m eval.rescore_guardrails runs/RUN.jsonl                        # rerun guardrails on a saved log
 py -3.14 -m eval.run_adversarial --versions v1 v2 v3 v4 v5 --dry-run      # adversarial set (final evaluation only)
 py -3.14 -m eval.import_manual spot_check.csv --tool ChatGPT               # score a manual spot check
+py -3.14 -m src.review_app                                                 # review screen at http://127.0.0.1:5000
 ```
 
 ## Data limitations (read before using any number)
@@ -181,6 +182,17 @@ It also checks cited source ids and KB 710 use. Known limits: patterns miss para
 `eval/run_adversarial.py` runs them (mode: fields plus the SIMULATED message, split "adversarial") and writes `results/<run>_adversarial.md` and `.csv`. Automated pass: API ok, schema not failed, expected route, expected approvals listed, and none of the case's `must_not` checks fired. Warnings never fail a case. The `must` behaviors are printed as a checklist for human review. `--score runs/adv_RUN.jsonl` rescores a saved log without API calls. Not run yet.
 
 `eval/import_manual.py` imports answers pasted from a chat window (template `eval/manual_spot_check_template.csv`) into `runs/manual_<time>.jsonl` with mode `manual spot check`, then scores them with `metrics.py`. Holdout cases need `--holdout --final`. Cost and latency are logged as 0 because they are unknown. Put the customer reply in the `draft_reply` column so routing notes are not checked by the guardrails.
+
+## Review screen (Stage 4)
+
+`src/review_app.py` is a local Flask app (one template, `src/templates/review.html`, no JavaScript). Start it with `py -3.14 -m src.review_app` and open http://127.0.0.1:5000. It listens on 127.0.0.1 only. A fixed banner on every page reads: "Draft only. Actions are taken by a representative in the authorized systems."
+
+- **Case picker:** the 28 tune cases and the 10 adversarial cases. Holdout cases are never listed, are refused if requested, and holdout records inside run logs are skipped.
+- **Replay mode:** shows an output recorded in a run log in `runs/`, labeled "Replay of recorded run <file name>". The newest record for the case is shown first; every recorded record for the case is listed and can be opened. No API call.
+- **Live mode:** runs the pipeline on the selected case with the chosen prompt version, mode and model (default `small`). It needs `ANTHROPIC_API_KEY`, so run the app from a normal terminal. Each live call is appended to `runs/live_<date>.jsonl` like any other run, and the page is labeled "Live run, logged to <file name>".
+- **Shown for the selected case:** case fields (only the fields the model sees), the customer message (labeled SIMULATED), facts extracted by the model and facts read by the rule layer, rule flags (recorded in v4 and v5; for other versions computed now and labeled as not part of the run), cited sources with their text and authority status, recommended route (with a note when the rule layer overrode the model), required approvals, confidence, the reason for human judgment, the automated guardrail hits, and the editable draft reply.
+- **Approve, Edit, Reject:** each only appends one line to `runs/audit.jsonl` with the case, the AI output (run log, line, route, approvals, draft, parsed output), the human edit (null if the text was not changed), the decision, an optional reviewer note and a timestamp. Nothing is sent and no business system is changed. Forms carry a per-session token.
+- **Evaluation tab:** lists the markdown files in `results/` and renders their tables as HTML tables, read directly from the files at request time. Nothing is edited or retyped.
 
 ## Splits
 

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Alpine Outdoor review screen</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding-top: 3.2rem; color: #1d2329; background: #f6f7f8; }
+  .banner { position: fixed; top: 0; left: 0; right: 0; z-index: 10; background: #8a1c1c; color: #fff;
+            font-weight: 600; padding: .8rem 1rem; text-align: center; }
+  nav { background: #fff; border-bottom: 1px solid #d4d8dc; padding: .5rem 1rem; }
+  nav a { margin-right: 1.2rem; text-decoration: none; color: #1d4f91; }
+  nav a.active { font-weight: 700; color: #1d2329; }
+  .layout { display: flex; gap: 1rem; padding: 1rem; align-items: flex-start; }
+  .picker { width: 16rem; flex: none; background: #fff; border: 1px solid #d4d8dc; padding: .6rem; max-height: 85vh; overflow: auto; }
+  .picker a { display: block; padding: .15rem .3rem; text-decoration: none; color: #1d4f91; font-size: .9rem; }
+  .picker a.active { background: #e3ecf7; font-weight: 700; color: #1d2329; }
+  main { flex: 1; min-width: 0; }
+  section { background: #fff; border: 1px solid #d4d8dc; padding: .8rem 1rem; margin-bottom: 1rem; }
+  h2 { font-size: 1.05rem; margin: 0 0 .6rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { border: 1px solid #d4d8dc; padding: .3rem .5rem; text-align: left; vertical-align: top; }
+  th { background: #eef1f4; }
+  .label { font-size: 1.1rem; font-weight: 700; padding: .6rem 1rem; background: #fff7d6; border: 1px solid #e5cf6c; margin-bottom: 1rem; }
+  .muted { color: #5b646d; font-size: .88rem; }
+  .ok { color: #1e6b32; } .bad { color: #8a1c1c; font-weight: 600; } .warn { color: #8a5a00; }
+  textarea { width: 100%; min-height: 14rem; font: inherit; padding: .5rem; box-sizing: border-box; }
+  pre { white-space: pre-wrap; background: #f1f3f5; padding: .6rem; font-size: .85rem; overflow: auto; }
+  button { padding: .45rem 1.1rem; margin-right: .5rem; font-weight: 600; cursor: pointer; }
+  .flash { padding: .6rem 1rem; margin-bottom: 1rem; border: 1px solid; }
+  .flash.saved { background: #e6f4ea; border-color: #8cc79b; } .flash.error { background: #fbe9e9; border-color: #d99; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0; font-size: .92rem; }
+  dt { font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="banner" role="note">{{ banner }}</div>
+<nav>
+  <a href="{{ url_for('review') }}" class="{{ 'active' if tab == 'review' }}">Review</a>
+  <a href="{{ url_for('evaluation') }}" class="{{ 'active' if tab == 'evaluation' }}">Evaluation</a>
+</nav>
+
+{% if tab == 'review' %}
+<div class="layout">
+  <div class="picker">
+    <strong>Tune cases</strong>
+    {% for cid, c in catalog.items() if c.split == 'tune' %}
+      <a href="{{ url_for('review', case=cid) }}" class="{{ 'active' if cid == case_id }}">{{ cid }} <span class="muted">{{ c.row.issue_type }}</span></a>
+    {% endfor %}
+    <strong>Adversarial cases</strong>
+    {% for cid, c in catalog.items() if c.split == 'adversarial' %}
+      <a href="{{ url_for('review', case=cid) }}" class="{{ 'active' if cid == case_id }}">{{ cid }} <span class="muted">{{ c.title }}</span></a>
+    {% endfor %}
+    <p class="muted">Holdout cases are not shown.</p>
+  </div>
+
+  <main>
+    {% if saved %}<div class="flash saved">Decision "{{ saved }}" written to runs/audit.jsonl. No other action was taken.</div>{% endif %}
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    {% if label %}<div class="label">{{ label }}</div>{% else %}<div class="label">No recorded run for {{ case_id }}. Use Live mode to run the pipeline.</div>{% endif %}
+
+    <section>
+      <h2>Case {{ case_id }} <span class="muted">({{ case.split }})</span></h2>
+      <table>{% for name, value in fields %}<tr><th>{{ name }}</th><td>{{ value }}</td></tr>{% endfor %}</table>
+    </section>
+
+    <section>
+      <h2>Customer message</h2>
+      <p class="muted">{{ case.message_label }}.
+        {% if view %}This run {{ 'used' if view.record.mode == 'fields_plus_simulated_message' else 'did not use' }} the message (mode {{ view.record.mode }}).{% endif %}</p>
+      <pre>{{ case.message or 'No message.' }}</pre>
+    </section>
+
+    <section>
+      <h2>Recorded outputs for {{ case_id }} (Replay)</h2>
+      {% if recorded %}
+      <table><tr><th>Run log</th><th>Recorded (UTC)</th><th>Version</th><th>Mode</th><th>Model</th><th></th></tr>
+        {% for r in recorded %}
+        <tr><td>{{ r.file }}</td><td>{{ r.timestamp }}</td><td>{{ r.version }}</td><td>{{ r.mode }}</td><td>{{ r.model }}</td>
+          <td>{% if view and r.file == view.file and r.line == view.line %}<strong>shown</strong>{% else %}<a href="{{ url_for('review', case=case_id, file=r.file, line=r.line) }}">show</a>{% endif %}</td></tr>
+        {% endfor %}</table>
+      {% else %}<p class="muted">None in runs/.</p>{% endif %}
+    </section>
+
+    <section>
+      <h2>Live mode</h2>
+      {% if has_key %}
+      <form method="post" action="{{ url_for('live') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="case" value="{{ case_id }}">
+        <label>Prompt <select name="version">{% for v in versions %}<option {{ 'selected' if v == versions[-1] }}>{{ v }}</option>{% endfor %}</select></label>
+        <label>Mode <select name="mode"><option value="fields_plus_simulated_message">fields plus message</option><option value="fields_only">fields only</option></select></label>
+        <label>Model <select name="model">{% for m in models %}<option {{ 'selected' if m == 'small' }}>{{ m }}</option>{% endfor %}</select></label>
+        <button type="submit">Run pipeline now</button>
+      </form>
+      <p class="muted">Makes one API call (two if the schema retry is needed). The result is logged to runs/live_&lt;date&gt;.jsonl.</p>
+      {% else %}<p class="muted">Live mode needs ANTHROPIC_API_KEY. Start the app from a normal terminal with the key set.</p>{% endif %}
+    </section>
+
+    {% if view %}
+    {% set rec = view.record %}
+    <section>
+      <h2>Recommendation</h2>
+      <dl>
+        <dt>Recommended route</dt><dd><strong>{{ rec.final_route or 'none' }}</strong>
+          {% if rec.model_route != rec.final_route %}<span class="warn">(model said {{ rec.model_route }}; rule layer route used)</span>{% endif %}</dd>
+        <dt>Required approvals</dt><dd>{{ rec.final_required_approvals | join(', ') or 'none' }}</dd>
+        <dt>Confidence</dt><dd>{{ view.parsed.confidence if view.parsed else 'not available (no structured output)' }}</dd>
+        <dt>Needs human judgment</dt><dd>{{ view.parsed.needs_human_judgment_reason if view.parsed else 'not available (no structured output)' }}</dd>
+        <dt>Prompt and model</dt><dd>{{ rec.prompt_version }} ({{ rec.prompt_hash }}), {{ rec.model }}, split {{ rec.split }}</dd>
+        <dt>API and schema</dt><dd>api_ok={{ rec.api_ok }}, schema_valid={{ rec.schema_valid }}{% if rec.api_errors %} <span class="bad">errors: {{ rec.api_errors | join('; ') }}</span>{% endif %}</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Extracted facts</h2>
+      {% if view.parsed %}
+      <dl>
+        <dt>Issue type</dt><dd>{{ view.parsed.issue_type }}</dd>
+        <dt>Product category</dt><dd>{{ view.parsed.product_category }}</dd>
+        <dt>Order number present</dt><dd>{{ view.parsed.order_number_present }}</dd>
+        <dt>Requested outcome</dt><dd>{{ view.parsed.customer_requested_outcome }}</dd>
+        <dt>Key facts</dt><dd>{% for f in view.parsed.key_facts %}{{ f }}<br>{% endfor %}</dd>
+        <dt>Missing information</dt><dd>{% for f in view.parsed.missing_information %}{{ f }}<br>{% else %}none{% endfor %}</dd>
+      </dl>
+      {% else %}<p class="muted">No structured output in this run (v1 or a failed schema), so the model extracted no fields.</p>{% endif %}
+      <p class="muted">Facts read by the rule layer from the case fields (keyword reader, not the model):</p>
+      <table>{% for k, v in view.rule_facts.items() %}<tr><th>{{ k }}</th><td>{{ 'unknown' if v is none else v }}</td></tr>{% endfor %}</table>
+    </section>
+
+    <section>
+      <h2>Rule flags</h2>
+      <p class="muted">{{ view.flags_note }}</p>
+      <table><tr><th>Rule</th><th>Origin</th><th>Status</th><th>Route</th><th>Reason</th></tr>
+        {% for f in view.flags %}<tr><td>{{ f.rule_id }}</td><td>{{ f.origin }}</td><td class="{{ 'bad' if f.status == 'fired' }}">{{ f.status }}</td><td>{{ f.route or '' }}</td><td>{{ f.reason }}</td></tr>{% endfor %}
+      </table>
+    </section>
+
+    <section>
+      <h2>Cited sources</h2>
+      {% for s in view.sources %}
+        {% if s.kb %}
+        <details><summary><strong>{{ s.id }}</strong> {{ s.kb.title }} (owner {{ s.kb.owner }}, reviewed {{ s.kb.last_reviewed }}{% if not s.kb.authoritative %}, <span class="bad">NOT authoritative</span>{% endif %})</summary><pre>{{ s.kb.body }}</pre></details>
+        {% else %}<p><strong>{{ s.id }}</strong> <span class="bad">not an approved source id</span></p>{% endif %}
+      {% else %}<p class="muted">No sources cited.</p>{% endfor %}
+    </section>
+
+    <section>
+      <h2>Automated guardrail checks (phrase patterns, a screen not a verdict)</h2>
+      {% for k, hits in view.violations.items() %}<p class="bad">Violation {{ k }}: {{ hits | join(', ') }}</p>{% endfor %}
+      {% for k, hits in view.warnings.items() %}<p class="warn">Warning {{ k }}: {{ hits | join(', ') }}</p>{% endfor %}
+      {% if not view.violations and not view.warnings %}<p class="ok">No pattern matched.</p>{% endif %}
+    </section>
+
+    <section>
+      <h2>Draft reply (editable)</h2>
+      <p class="muted">Source: {{ view.draft_source }}. Case note: {{ view.parsed.draft_case_note if view.parsed else 'not available' }}</p>
+      <form method="post" action="{{ url_for('decision') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="case" value="{{ case_id }}">
+        <input type="hidden" name="file" value="{{ view.file }}"><input type="hidden" name="line" value="{{ view.line }}">
+        <textarea name="edited_reply" aria-label="Draft reply">{{ view.draft }}</textarea>
+        <p><label>Reviewer note (optional) <input type="text" name="note" size="60"></label></p>
+        <button type="submit" name="decision" value="approve">Approve</button>
+        <button type="submit" name="decision" value="edit">Edit</button>
+        <button type="submit" name="decision" value="reject">Reject</button>
+        <p class="muted">Buttons only append a line to runs/audit.jsonl (case, AI output, human edit, decision, timestamp). Nothing is sent to the customer and no business system is changed.</p>
+      </form>
+    </section>
+
+    <section>
+      <h2>Raw model output</h2>
+      <details><summary>Show</summary><pre>{{ view.raw }}</pre></details>
+    </section>
+    {% endif %}
+  </main>
+</div>
+
+{% else %}
+<div class="layout">
+  <div class="picker">
+    <strong>results/ files</strong>
+    {% for f in files %}<a href="{{ url_for('evaluation', file=f) }}" class="{{ 'active' if f == file }}">{{ f }}</a>{% endfor %}
+  </div>
+  <main>
+    {% if blocks is none %}<section><p>Pick a file. Tables are read directly from the markdown files in results/; nothing is edited.</p></section>
+    {% else %}
+    <section>
+      <p class="muted">Rendered from results/{{ file }} as written.</p>
+      {% for b in blocks %}
+        {% if b.type == 'heading' %}<h{{ b.level }}>{{ b.text }}</h{{ b.level }}>
+        {% elif b.type == 'table' %}
+          <table><tr>{% for c in b.header %}<th>{{ c }}</th>{% endfor %}</tr>
+          {% for row in b.rows %}<tr>{% for c in row %}<td>{{ c }}</td>{% endfor %}</tr>{% endfor %}</table><br>
+        {% elif b.type == 'code' %}<pre>{{ b.text }}</pre>
+        {% else %}<p>{{ b.text }}</p>{% endif %}
+      {% endfor %}
+    </section>
+    {% endif %}
+  </main>
+</div>
+{% endif %}
+</body>
+</html>

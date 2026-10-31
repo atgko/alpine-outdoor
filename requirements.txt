@@ -1,2 +1,6 @@
 # Stage 1 uses only the Python standard library (3.11+).
-# Stage 2 will add: anthropic, pydantic, and optionally the Google Gemini SDK.
+# Stage 2 and 3: LLM pipeline and evaluation.
+anthropic
+pydantic
+# Stage 4: review screen (src/review_app.py). Installed version on the dev machine: flask 3.1.3.
+flask

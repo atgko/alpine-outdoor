@@ -204,3 +204,17 @@ One entry per experiment or build step: what changed, why, result, and anything 
 The 9 records cleared (v1 2, v2 3, v4 2, v5 2) are exactly the 9 "received" or "review your refund request" false positives in `results/checkpoint3_review.md`. Warnings did not change. Still flagged and still false positives on manual review: v2 CS-5236 with message ("whether the harness is safe to use and whether it is covered under warranty") and v2 CS-5245 fields only ("check your carabiner's serial number").
 
 **Failures and deviations:** while writing the test, a sentence with the promise four words after "We have" ("We have received your return and issued your refund") was found not to be flagged. This gap existed before the change (the pattern allows at most two words in between) and is not fixed. The fix was written after seeing these outputs, so zero false positives of this kind on the tune set is not evidence about new outputs.
+
+## 2026-10-30: Stage 4 review screen
+
+**What changed:** Added `src/review_app.py` (Flask) and `src/templates/review.html` (one template, no JavaScript), with tests in `tests/test_review_app.py`. Flask 3.1.3 was installed into Python 3.14 and added to `requirements.txt`.
+
+**Why:** Stage 4 of the build plan (brief section 8.1), with the user's additions: Replay and Live modes, tune and adversarial cases only, and an Evaluation tab.
+
+**Design:** Replay reads recorded records from `runs/` and is labeled "Replay of recorded run <file name>"; the newest record for a case is shown first. Live calls `run_case` and appends the record to `runs/live_<date>.jsonl`; it is refused without `ANTHROPIC_API_KEY`. Holdout cases are never listed, are refused by id, and holdout records in logs are skipped. Approve, Edit and Reject only append to `runs/audit.jsonl`. Forms carry a per-session token, run log and results file names are checked against a plain file name pattern, and the app listens on 127.0.0.1 only. The Evaluation tab parses the markdown files in `results/` at request time; cell text is shown as written and escaped.
+
+**Result:** 199 unit tests pass. No API calls: tests use a fake client and temporary folders. A check against the real `runs/` folder rendered all 38 case pages (about 0.07 s each) and every results file, and wrote nothing to `runs/audit.jsonl`. Live mode has not been run against the API.
+
+**Failures and deviations:**
+- The first version picked the default record by file name, which opened Checkpoint 2 records before Checkpoint 3 ones. Fixed by sorting on the record timestamp.
+- The model menu listed `large` (Opus) first, which would have made it the default. Fixed: `small` is selected by default.

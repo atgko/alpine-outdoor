@@ -12,7 +12,7 @@ Last updated: 2026-10-30. Read this first when resuming. The full brief is `clau
 | Checkpoint 2: v1 to v4 on 3 cases, side by side | Done and reviewed 2026-10-30 |
 | Stage 3: evaluation harness | Built and committed 2026-10-30 (`run_eval.py`, `metrics.py`, adversarial cases, guardrail fixes) |
 | Checkpoint 3: v1 to v5 on the tune set | Run and reviewed 2026-10-30. Decisions applied. v4 vs v5 manual scoring open |
-| Stage 4: review screen and demo | Not started |
+| Stage 4: review screen and demo | Review screen built 2026-10-30 (`src/review_app.py`, Replay and Live, audit log, Evaluation tab). Live mode not yet run. Demo script (`demo.py`, `DEMO.md`) not started |
 | Final evaluation (section 9) | Not started. Only after an explicit "go" |
 
 Repository: private GitHub repo https://github.com/atgko/alpine-outdoor (remote `origin`, branch `main`). Tags `prompt-v1` to `prompt-v5` are pushed.
@@ -20,6 +20,7 @@ Repository: private GitHub repo https://github.com/atgko/alpine-outdoor (remote 
 ## Outstanding actions (user)
 
 1. Score `results/v4_vs_v5_manual_review.md` (8 pairs, one row each), then decide whether v4 or v5 is the final configuration.
+2. Try the review screen: `py -3.14 -m src.review_app` in a normal terminal, open http://127.0.0.1:5000. Replay works without the key; Live mode makes real API calls and logs them to `runs/live_<date>.jsonl`. Flask 3.1.3 was installed into Python 3.14 on 2026-10-30.
 2. API key is set and works. The user accepted the risk of keeping the key pasted on 2026-10-28 active until the project ends, and will revoke it then. Never paste keys into chat or files.
 3. API runs cannot reach the network from the Claude Code sandbox, including `!` commands. The user runs them in a normal terminal outside Claude Code.
 
@@ -116,4 +117,5 @@ Checkpoint 2 (`runs/run_20261030T224609Z_small.jsonl`, 3 tune cases, both modes,
 | a6b05bf, ff16d5f | fix: guardrail fixes and offline rescoring; Stage 3: evaluation harness |
 | 620c999 | feat: adversarial runner and manual spot check import |
 | bbb9c6d | Checkpoint 3: v1 to v5 on the tune set |
-| (next) | fix: receipt is not a promise; Checkpoint 3 decisions (see git log) |
+| 5d204f7 | fix: receipt is not a promise; Checkpoint 3 decisions |
+| (next) | Stage 4: review screen (see git log) |
