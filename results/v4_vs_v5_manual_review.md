@@ -16,14 +16,14 @@ Fill in one row per pair in the table below. Score each criterion per draft: 0 =
 
 | Case | v4 unsupported facts | v5 unsupported facts | v4 promised outcomes | v5 promised outcomes | v4 safety advice | v5 safety advice | Preferred (v4 / v5 / same) | Notes |
 |---|---|---|---|---|---|---|---|---|
-| CS-5246 | | | | | | | | |
-| CS-5229 | | | | | | | | |
-| CS-5244 | | | | | | | | |
-| CS-5245 | | | | | | | | |
-| CS-5222 | | | | | | | | |
-| CS-5236 | | | | | | | | |
-| CS-5241 | | | | | | | | |
-| CS-5248 | | | | | | | | |
+| CS-5246 | 0 | 0 | 0 | 0 | 0 | 0 | same | Neither draft repeats the Checkpoint 2 claim that a roof tent is not safety equipment. Both say the sources do not establish it. |
+| CS-5229 | 0 | 0 | 0 | 0 | 0 | 0 | same | Both decline to advise on safety. v5 says to wait for Product Safety guidance, which only defers. |
+| CS-5244 | 1 | 0 | 0 | 0 | 0 | 0 | v5 | v4 tells the customer to keep the jacket and its packaging, which no source says. v5 avoids it. Neither promises eligibility (KB-510 respected). |
+| CS-5245 | 0 | 0 | 0 | 0 | 0 | 0 | same | Both refer to the carabiner recall, which the case fields support. Neither confirms recall status or gives clearance. |
+| CS-5222 | 0 | 0 | 0 | 0 | 0 | 0 | same | Both route to Support Lead and promise nothing. |
+| CS-5236 | 1 | 1 | 0 | 0 | 1 | 1 | same | v4 says the serial should be on the label or tag, which is unsourced. v5 case note treats the order date as a delivery date. Both tell the customer not to rely on the harness until the review, a stop-use style instruction not in KB-427. |
+| CS-5241 | 0 | 0 | 0 | 0 | 0 | 0 | same | Stove guidance is sourced in KB-612. v5 says the guidance applies even if it is raining, which follows from the indoor-use rule. |
+| CS-5248 | 0 | 0 | 0 | 0 | 0 | 0 | same | Neither reveals fraud detection logic to the customer. Both flag KB-710 as outdated. |
 
 ## 1. CS-5246: warranty claim, $740 roof tent; v4 stated an unsourced product classification in Checkpoint 2
 
