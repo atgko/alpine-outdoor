@@ -1,6 +1,6 @@
 # Project Status and Handoff
 
-Last updated: 2026-10-30. Read this first when resuming. The full brief is `claude_code_build_prompt.md`; section 10 (rules for how we work) applies to the whole project.
+Last updated: 2026-10-31. Read this first when resuming. The full brief is `claude_code_build_prompt.md`; section 10 (rules for how we work) applies to the whole project.
 
 ## Where we are
 
@@ -11,15 +11,15 @@ Last updated: 2026-10-30. Read this first when resuming. The full brief is `clau
 | Stage 2: LLM pipeline, prompts v1 to v5 | Done. v5 added after Checkpoint 2 review |
 | Checkpoint 2: v1 to v4 on 3 cases, side by side | Done and reviewed 2026-10-30 |
 | Stage 3: evaluation harness | Built and committed 2026-10-30 (`run_eval.py`, `metrics.py`, adversarial cases, guardrail fixes) |
-| Checkpoint 3: v1 to v5 on the tune set | Run and reviewed 2026-10-30. Decisions applied. v4 vs v5 manual scoring open |
+| Checkpoint 3: v1 to v5 on the tune set | Run and reviewed 2026-10-30. Decisions applied. v4 vs v5 sheet scored 2026-10-31: v5 is the final configuration, chosen as a tie-break |
 | Stage 4: review screen and demo | Review screen built 2026-10-30 (`src/review_app.py`, Replay and Live, audit log, Evaluation tab). Live mode not yet run. Demo script (`demo.py`, `DEMO.md`) not started |
-| Final evaluation (section 9) | Not started. Only after an explicit "go" |
+| Final evaluation (section 9) | "Go" given 2026-10-31 with limits (see below). Commands handed to the user. Not run yet |
 
 Repository: private GitHub repo https://github.com/atgko/alpine-outdoor (remote `origin`, branch `main`). Tags `prompt-v1` to `prompt-v5` are pushed.
 
 ## Outstanding actions (user)
 
-1. Score `results/v4_vs_v5_manual_review.md` (8 pairs, one row each), then decide whether v4 or v5 is the final configuration.
+1. Run the final evaluation commands below in a normal terminal, then report back and ask for the review.
 2. Try the review screen: `py -3.14 -m src.review_app` in a normal terminal, open http://127.0.0.1:5000. Replay works without the key; Live mode makes real API calls and logs them to `runs/live_<date>.jsonl`. Flask 3.1.3 was installed into Python 3.14 on 2026-10-30.
 2. API key is set and works. The user accepted the risk of keeping the key pasted on 2026-10-28 active until the project ends, and will revoke it then. Never paste keys into chat or files.
 3. API runs cannot reach the network from the Claude Code sandbox, including `!` commands. The user runs them in a normal terminal outside Claude Code.
@@ -41,7 +41,33 @@ Repository: private GitHub repo https://github.com/atgko/alpine-outdoor (remote 
 - **Gemini.** Not configured. Before Stage 3, check the current Google docs for model names and free tier limits, report them, and get confirmation before any Gemini call. The Gemini SDK must also be installed by the user.
 - **Refusal fallback is off, confirmed by the user 2026-10-30.** It would silently swap the model and mix models in comparisons. Refusals are logged as failures.
 
-## Checkpoint 3 commands (user runs them in a normal terminal)
+## Final evaluation (go given 2026-10-31)
+
+Final configuration: prompt v5, `claude-haiku-5-5`, chosen as a tie-break (scored sheet: v4 = 3, v5 = 2 across 8 tune cases; the only clear difference is CS-5244, and with one run per case it could be run to run variation).
+
+Limits set by the user:
+
+1. Adversarial set on v1, v3 and v5 on the small model.
+2. Holdout once on v5, small model, both modes, with `--holdout --final`.
+3. Rule T1 stays as is, as decided for the midterm.
+4. No changes to prompts, rules or guardrails after the holdout run, and no second holdout run.
+
+Commands (user runs them in a normal terminal):
+
+```
+cd "C:\Users\athav\OneDrive\Documents\Alpine Outdoor"
+py -3.14 -m unittest discover -s tests -t .
+py -3.14 -m eval.run_adversarial --versions v1 v3 v5 --model small --dry-run
+py -3.14 -m eval.run_eval --split holdout --versions v5 --mode both --model small --holdout --final --dry-run
+py -3.14 -m eval.run_adversarial --versions v1 v3 v5 --model small
+py -3.14 -m eval.run_eval --split holdout --versions v5 --mode both --model small --holdout --final
+```
+
+Estimate: adversarial 10 cases x 3 versions = 30 calls (up to 50), about $0.03 (up to $0.05). Holdout 20 cases x 2 modes = 40 calls (up to 80), about $0.04 (up to $0.09). Total 70 calls (up to 130), about $0.07 (up to $0.14), about 12 minutes. Costs use the per call averages in the Checkpoint 3 tune logs, so treat as rough. Each command stays under the 200 call guard, so no `--yes` is needed.
+
+Not in this go: the consistency test (brief section 9 item 3), the adversarial set on v2 and v4 (item 2), other providers (item 1), and `results/summary.md` (item 4).
+
+## Checkpoint 3 commands (done, kept for reference)
 
 ```
 cd "C:\Users\athav\OneDrive\Documents\Alpine Outdoor"
@@ -58,11 +84,11 @@ Estimate: 28 tune cases x 2 modes = 56 calls per version, 280 in total (up to 50
 
 ## Next steps once unblocked
 
-1. Checkpoint 3 is done (280 records, 281 calls, $0.2507, 0 failures, 1 schema retry) and reviewed. Decisions of 2026-10-30 are applied: receipt false positive fixed and the five tune logs rescored (v4 and v5 now 0 violations), T1 unchanged for the midterm (Q9), no unsourced-claims check (README known limitation), v4 vs v5 review sheet created. Stop and wait for the user.
-2. Open: the user scores the v4 vs v5 sheet. Remaining known guardrail false positives: v2 CS-5236 with message, v2 CS-5245 fields only. Known guardrail gap: a promise more than two words after "we have" is missed.
-3. For the final submission: disable or refine T1 (Q9) and rerun the tune set before any holdout run. If prompts change, create new versions, never overwrite a prompt file, and tag each one.
-3. Built, not run: `eval/run_adversarial.py` (adversarial set) and `eval/import_manual.py` (manual spot check). The adversarial set and the consistency test (`--repeats 3` on 10 cases) belong to the final evaluation, which needs an explicit "go". A manual spot check needs the user to paste chat outputs into the template CSV.
-4. The tune runs have finished, so the 2026-10-30 freeze on editing `src/` and `eval/` is over. Prompts and rules stay unchanged until the user has reviewed Checkpoint 3.
+1. Checkpoint 3 is done (280 records, 281 calls, $0.2507, 0 failures, 1 schema retry) and reviewed. Decisions of 2026-10-30 are applied: receipt false positive fixed and the five tune logs rescored (v4 and v5 now 0 violations), T1 unchanged for the midterm (Q9), no unsourced-claims check (README known limitation), v4 vs v5 review sheet created and scored.
+2. Known guardrail limits, not fixed: false positives on v2 CS-5236 with message and v2 CS-5245 fields only; a promise more than two words after "we have" is missed; the stop use style line in v4 and v5 CS-5236 ("not to rely on the harness") found in manual scoring raised no warning.
+3. Next: the user runs the final evaluation commands above and asks for the review. Do not start the review before that.
+4. T1: the QUESTIONS.md Q9 plan to disable or refine T1 and rerun the tune set before any holdout run is not being followed for this holdout run (limit 3). Any later T1 change cannot be checked on the holdout (limit 4), and any such result must be reported as tune only.
+5. Prompts, rules and guardrails are frozen from now on. Built, not run: `eval/import_manual.py` (manual spot check) needs the user to paste chat outputs into the template CSV.
 
 ## Key results so far (from logged runs only)
 
@@ -118,4 +144,6 @@ Checkpoint 2 (`runs/run_20261030T224609Z_small.jsonl`, 3 tune cases, both modes,
 | 620c999 | feat: adversarial runner and manual spot check import |
 | bbb9c6d | Checkpoint 3: v1 to v5 on the tune set |
 | 5d204f7 | fix: receipt is not a promise; Checkpoint 3 decisions |
-| (next) | Stage 4: review screen (see git log) |
+| bff638e | Stage 4: review screen |
+| 2233c79 | v4 vs v5 sheet scored by the user (GitHub web edit) |
+| (next) | Final configuration and go recorded (see git log) |

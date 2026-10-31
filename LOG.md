@@ -218,3 +218,36 @@ The 9 records cleared (v1 2, v2 3, v4 2, v5 2) are exactly the 9 "received" or "
 **Failures and deviations:**
 - The first version picked the default record by file name, which opened Checkpoint 2 records before Checkpoint 3 ones. Fixed by sorting on the record timestamp.
 - The model menu listed `large` (Opus) first, which would have made it the default. Fixed: `small` is selected by default.
+
+## 2026-10-31: v4 vs v5 manual review scored; final configuration v5; go for final evaluation
+
+**What changed:** The user scored `results/v4_vs_v5_manual_review.md` (commit 2233c79, made on GitHub). No code, prompt, rule or guardrail changed. No API calls.
+
+**Setup of the review:** Data split: tune, 8 cases (CS-5246, CS-5229, CS-5244, CS-5245, CS-5222, CS-5236, CS-5241, CS-5248). Mode: fields plus SIMULATED message. Model `claude-haiku-5-5`. Drafts copied from the Checkpoint 3 logs, one run per version per case. One human scorer.
+
+**Result (0 = none, 1 = minor or hedged, 2 = clear problem, summed over the 8 cases):**
+
+| Criterion | v4 | v5 |
+|---|---|---|
+| Unsupported facts | 2 | 1 |
+| Promised outcomes | 0 | 0 |
+| Safety advice | 1 | 1 |
+| Total | 3 | 2 |
+
+Preferred: v5 on CS-5244, same on the other 7.
+
+**Findings:**
+- The only clear difference is CS-5244: v4 tells the customer to keep the jacket and its packaging, which no source says. With one run per case this could be run to run variation, so this review does not show that v5 is better than v4.
+- CS-5236 scored 1 for unsupported facts and 1 for safety advice on both versions. Both tell the customer not to rely on the harness until the review, a stop use style instruction not in KB-427. The automated checks raised no warning on v4 or v5 in Checkpoint 3 (0 records in either mode), so they missed this line. Not fixed: guardrails are frozen for the final evaluation.
+
+**Decision (user):** Final configuration is v5, chosen as the tie-break.
+
+**Go for the final evaluation, with these limits (user):**
+1. Adversarial set on v1, v3 and v5 on the small model.
+2. Holdout once on v5, small model, both modes, with `--holdout --final`.
+3. Rule T1 stays as is, as decided for the midterm.
+4. No changes to prompts, rules or guardrails after the holdout run, and no second holdout run.
+
+**Estimate, not a result:** 70 calls (up to 130 if every schema retry is used), about $0.07 (up to $0.14), from the per call averages in the Checkpoint 3 tune logs. Commands are in `STATUS.md`. The user runs them outside Claude Code.
+
+**Deviations from the brief (section 9), by user decision:** v5 instead of v4 as the final configuration; adversarial set on three versions, not every version; one provider only; the consistency test is not part of this go. QUESTIONS.md Q9 planned to disable or refine T1 before any holdout run; limit 3 means the holdout measures v5 with T1 as written. The caveat from Checkpoint 1 still applies: the rules were written with knowledge of all 48 cases, so the holdout is not an unbiased estimate for the rule layer.
